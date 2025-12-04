@@ -2,3 +2,4 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-04 15:51:36,raw_sistema_info_mortalidade_prelim.parquet,1527369,93.93
 2025-12-04 15:51:36,raw_sistema_info_mortalidade.parquet,11688306,689.54
 2025-12-04 15:51:36,raw_macroregiao_de_saude.parquet,5570,0.16
+2025-12-04 16:03:34,raw_metadados_simbr.csv,3,0.0
