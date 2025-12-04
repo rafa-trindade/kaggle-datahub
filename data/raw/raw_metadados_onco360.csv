@@ -1,0 +1,11 @@
+data_extracao,arquivo,numero_registros,tamanho_mib
+2025-12-04 15:38:54,raw_cnes_estabelecimentos.parquet,595095,67.04
+2025-12-04 15:38:54,raw_siops_exec_rreo.parquet,33589,0.96
+2025-12-04 15:38:54,raw_macroregiao_de_saude.parquet,5570,0.16
+2025-12-04 15:38:54,raw_siops_exec_saude.parquet,4350,0.11
+2025-12-04 15:38:54,raw_siops_indicadores.parquet,10159,0.18
+2025-12-04 15:38:54,raw_painel_de_oncologia.parquet,5227873,106.08
+2025-12-04 15:38:54,raw_inca_registro_hospitalar.parquet,5399686,111.66
+2025-12-04 15:38:54,raw_sistema_info_mortalidade_prelim.parquet,1527369,93.93
+2025-12-04 15:38:54,raw_inca_cancer_populacional.parquet,2368916,48.15
+2025-12-04 15:38:54,raw_sistema_info_mortalidade.parquet,11688306,689.54

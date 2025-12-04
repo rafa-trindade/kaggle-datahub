@@ -1,0 +1,15 @@
+FROM apache/airflow:2.7.1-python3.11
+
+WORKDIR /opt/airflow
+
+USER root
+
+COPY requirements.txt /opt/airflow/requirements.txt
+RUN chmod 644 /opt/airflow/requirements.txt
+
+RUN mkdir -p /opt/airflow/data/raw /opt/airflow/data/utils && \
+    chown -R 50000:50000 /opt/airflow/data
+
+USER airflow
+
+RUN pip install --user -r /opt/airflow/requirements.txt

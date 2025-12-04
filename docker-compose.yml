@@ -1,0 +1,106 @@
+services:
+  postgres:
+    image: postgres:17.5
+    container_name: postgres_airflow
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  airflow-init:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-init
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    env_file:
+      - .env
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin ||
+      true
+      "
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+      - ./.kaggle/kaggle.json:/home/airflow/.config/kaggle/kaggle.json:ro
+    depends_on:
+      - postgres
+    restart: "no"
+
+  airflow-webserver:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-webserver
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    env_file:
+      - .env
+    command: airflow webserver
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+      - ./.kaggle/kaggle.json:/home/airflow/.config/kaggle/kaggle.json:ro
+    depends_on:
+      - postgres
+      - airflow-init
+      - minio
+    restart: always
+
+  airflow-scheduler:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-scheduler
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    env_file:
+      - .env
+    command: airflow scheduler
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+      - ./.kaggle/kaggle.json:/home/airflow/.config/kaggle/kaggle.json:ro
+    depends_on:
+      - postgres
+      - airflow-init
+      - minio
+    restart: always
+
+volumes:
+  postgres_data:
+  minio_data:
