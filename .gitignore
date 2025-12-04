@@ -16,9 +16,10 @@ venv/
 *.dbc
 *.dbf
 *.log
+latest
 
-airflow/logs/
 dbt/logs/
+
 
 *.parquet
 
