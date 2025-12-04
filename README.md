@@ -1,6 +1,6 @@
 # ⚙️ kaggle-datahub
 
-[![Projeto Badge](https://img.shields.io/badge/-Datasets%20Kaggle-2B5482?style=flat-square&logo=kaggle&logoColor=fff&labelColor=1D3557)](https://github.com/rafa-trindade/pdp-hospedagem)
+[![Projeto Badge](https://img.shields.io/badge/-Datasets%20Kaggle-2B5482?style=flat-square&logo=kaggle&logoColor=fff&labelColor=1D3557)](https://www.kaggle.com/rafatrindade/datasets)
 
 **Pipeline de orquestração de dados (ETL) para automatizar a coleta, processamento e armazenamento de *datasets* do Kaggle, utilizando Apache Airflow e Docker.**
 
