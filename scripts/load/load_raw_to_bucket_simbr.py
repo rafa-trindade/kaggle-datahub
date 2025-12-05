@@ -55,7 +55,7 @@ def coletar_metadados_raw():
 
     arquivos = [
         f for f in ARQUIVOS_PARA_ENVIAR.keys()
-        if os.path.isfile(os.path.join(RAW_DIR, f))
+        if os.path.isfile(os.path.join(RAW_DIR, f)) and f != os.path.basename(METADADOS_FILE)
     ]
 
     if not arquivos:
