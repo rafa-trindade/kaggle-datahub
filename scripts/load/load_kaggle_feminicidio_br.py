@@ -3,14 +3,15 @@ from pathlib import Path
 from kaggle.api.kaggle_api_extended import KaggleApi
 from datetime import datetime
 
-DATA_DIR = Path("/opt/airflow/data/processed") 
+DATA_DIR = Path("/opt/airflow/data/") 
 KAGGLE_JSON_PATH = Path("/home/airflow/.config/kaggle/kaggle.json")
 DATASET_NAME = 'feminicidio-br'
 DATASET_TITLE = 'feminicidio-br - Pipeline Semanal'
 
 ARQUIVOS_PARA_ENVIAR = {
-    "feminicidio_prelim.parquet": "feminicidio_prelim.parquet",
-    "feminicidio_serie_historica.parquet": "feminicidio_serie_historica.parquet"
+    "processed/feminicidio_prelim.parquet": "feminicidio_prelim.parquet",
+    "processed/feminicidio_serie_historica.parquet": "feminicidio_serie_historica.parquet",
+    "raw/raw_macroregiao_de_saude.parquet": "macroregiao.parquet"
 }
 
 api = KaggleApi()

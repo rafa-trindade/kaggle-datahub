@@ -30,7 +30,7 @@ with zipfile.ZipFile(BytesIO(response.content)) as z:
     csv_name = [name for name in z.namelist() if name.endswith(".csv")][0]
     with z.open(csv_name) as csvfile:
         print(f"Lendo {csv_name}...")
-        df = pd.read_csv(csvfile, sep=";", encoding="latin1", dtype=str)
+        df = pd.read_csv(csvfile, sep=";", encoding="utf-8-sig", dtype=str)
         
 print(f"Salvando em {parquet_file}...")
 df.to_parquet(parquet_file, index=False)
