@@ -13,7 +13,13 @@ Este projeto é ideal para:
 *   Cientistas de Dados que desejam manter seus modelos atualizados com os dados mais recentes do Kaggle.
 *   Qualquer pessoa interessada em aprender sobre orquestração de dados com Airflow e Docker.
 
-### 🛠️ Tecnologias Utilizadas
+## 🚀 Fluxo de Trabalho do Airflow
+
+Detalhes da execução do pipeline:
+
+![DAG](docs/kaggle-airflow.png)
+
+## 🛠️ Tecnologias Utilizadas
 
 | Tecnologia | Propósito |
 | :--- | :--- |
