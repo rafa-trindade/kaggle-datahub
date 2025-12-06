@@ -24,10 +24,10 @@ def load_kaggle_feminicidio_br():
 # DAG
 # ----------------------------
 with DAG(
-    'fetch_weekly_kaggle_feminicidio',
+    'load_weekly_kaggle_feminicidio',
     default_args=default_args,
     description='Pipeline Semanal de Coleta e Transformação de Dados',
-    schedule_interval="0 3 * * 0",
+    schedule_interval="0 7 * * 0",
     start_date=datetime(2025, 1, 1),
     catchup=False,
 ) as dag:

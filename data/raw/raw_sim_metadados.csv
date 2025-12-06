@@ -1,6 +1,6 @@
 data_extracao,arquivo,numero_registros,tamanho_mib
-2025-12-06 07:46:36,raw_sistema_info_mortalidade_prelim.parquet,1527369,93.93
-2025-12-06 07:46:36,raw_sistema_info_mortalidade.parquet,11688306,689.54
-2025-12-06 07:46:36,raw_macroregiao_de_saude.parquet,5570,0.28
-2025-12-06 07:46:36,raw_sim_causas_externas_prelim.parquet,158250,8.14
-2025-12-06 07:46:36,raw_sim_causas_externas.parquet,2646561,129.29
+2025-12-06 17:00:19,raw_sistema_info_mortalidade_prelim.parquet,1527369,87.87
+2025-12-06 17:00:19,raw_sistema_info_mortalidade.parquet,23138215,1124.01
+2025-12-06 17:00:19,raw_macroregiao_de_saude.parquet,5570,0.28
+2025-12-06 17:00:19,raw_sim_causas_externas_prelim.parquet,158250,8.14
+2025-12-06 17:00:19,raw_sim_causas_externas.parquet,2646561,129.29

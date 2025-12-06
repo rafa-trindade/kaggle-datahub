@@ -98,6 +98,7 @@ codigos_agressao = {
     "Y090": "Agressão por meios não especificados",
     "Y350": "Intervenção legal envolvendo uso de armas de fogo"
     
+    #"R99": "Causa Básica Mal Definida ou Não Especificada de Mortalidade" 
 }
 
 # ------------------- Mapeamentos -------------------

@@ -90,7 +90,7 @@ def main() -> bool:
             if a.upper().startswith("DOBR")
             and a.upper().endswith(".DBC")
             and a[4:8].isdigit()
-            and int(a[4:8]) >= 2016
+            and int(a[4:8]) >= 2006
         ]
 
         print(

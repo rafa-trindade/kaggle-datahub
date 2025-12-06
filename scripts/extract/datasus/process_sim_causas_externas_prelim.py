@@ -65,7 +65,7 @@ try:
                 os.remove(caminho_dbf)
                 logger.warning(f"DBF pré-existente removido: {caminho_dbf}")
 
-            # DESCOMPACTAÇÃO
+           
             try:
                 logger.info(f"Descompactando {arquivo} (tamanho: {round(os.path.getsize(caminho_dbc) / (1024*1024), 2)} MB)...")
                 
@@ -82,7 +82,6 @@ try:
                 logger.error(f"❌ Falha CRÍTICA ao descompactar {arquivo}. Verifique se o arquivo está lá: {e}")
                 continue
 
-            # 🌟 CORREÇÃO APLICADA AQUI! Removido 'ignore_errors=True'
             tabela = DBF(caminho_dbf, encoding="latin1") 
             batch = []
             count = 0

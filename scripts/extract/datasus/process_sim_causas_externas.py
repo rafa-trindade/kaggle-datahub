@@ -1,6 +1,6 @@
 import os
 import logging
-import csv # Mantido para compatibilidade, mas não mais usado para escrita em massa
+import csv
 import time
 import datasus_dbc
 from dbfread import DBF
@@ -34,7 +34,7 @@ os.makedirs(os.path.join(base_dir, "data", "raw"), exist_ok=True)
 # -----------------------------
 batch_size = 50_000
 total_registros = 0
-colunas_finais_dinamicas = set() # Usamos um SET para a Union Schema
+colunas_finais_dinamicas = set()
 parquet_writer = None
 
 # -----------------------------
@@ -48,30 +48,25 @@ if not arquivos_dbc:
     
 logger.info(f"Arquivos encontrados: {len(arquivos_dbc)}")
 
-# --- FASE 1: CONSTRUIR O UNION SCHEMA (Coletar todas as colunas) ---
 logger.info("Fase 1: Construindo o Union Schema (Coletando nomes de todas as colunas)...")
 try:
     for idx, arquivo in enumerate(arquivos_dbc, 1):
         caminho_dbc = os.path.join(DBC_DIR, arquivo)
         caminho_dbf = caminho_dbc.replace(".DBC", ".DBF").replace(".dbc", ".dbf")
         
-        # 1. Descompactação (temporária para ler o field_names)
         try:
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             datasus_dbc.decompress(caminho_dbc, caminho_dbf) 
             tabela = DBF(caminho_dbf, encoding="latin1")
             
-            # 2. Adiciona as colunas ao SET
             colunas_finais_dinamicas.update(tabela.field_names)
             
-            # 3. Limpeza Imediata
             os.remove(caminho_dbf)
         except Exception as e:
             logger.error(f"❌ Falha na Fase 1 para {arquivo}: {e}")
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             continue
     
-    # Converte o SET para uma LISTA ordenada para definir o SCHEMA
     colunas_finais_dinamicas = sorted(list(colunas_finais_dinamicas))
     logger.info(f"Union Schema concluído. Total de colunas: {len(colunas_finais_dinamicas)}")
 
@@ -80,7 +75,6 @@ except Exception as e:
     exit(1)
 
 
-# --- FASE 2: PROCESSAMENTO E ESCRITA DIRETA EM PARQUET ---
 logger.info("Fase 2: Processando e escrevendo dados diretamente em Parquet (Batch Mode)...")
 
 try:
@@ -88,8 +82,6 @@ try:
         logger.warning("Union Schema vazio. Finalizando.")
         raise Exception("Nenhuma coluna detectada para processamento.")
 
-    # 🌟 1. Inicializa o Parquet Writer com o Union Schema
-    # Assumimos que todos os campos devem ser strings para máxima compatibilidade
     parquet_schema = pa.schema([(name, pa.string()) for name in colunas_finais_dinamicas])
     parquet_writer = pq.ParquetWriter(PARQUET_FINAL_PATH, parquet_schema)
 
@@ -99,7 +91,6 @@ try:
 
         logger.info(f"[{idx}/{len(arquivos_dbc)}] Processando {arquivo}...")
         
-        # 2. Descompacta novamente para leitura
         try:
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             datasus_dbc.decompress(caminho_dbc, caminho_dbf)
@@ -115,16 +106,13 @@ try:
             count += 1
             total_registros += 1
 
-            # 3. Garante todas as colunas do Union Schema (preenche com "" se faltar)
             registro_formatado = {k: str(registro.get(k, "")).strip() for k in colunas_finais_dinamicas}
             batch.append(registro_formatado)
 
             if len(batch) >= batch_size:
-                # Cria DataFrame e PyArrow Table
                 df = pd.DataFrame(batch, columns=colunas_finais_dinamicas, dtype=str)
                 table = pa.Table.from_pandas(df, schema=parquet_schema, preserve_index=False)
                 
-                # 🌟 Escreve DIRETAMENTE NO PARQUET (memória baixa)
                 parquet_writer.write_table(table)
                 batch.clear()
 
@@ -143,7 +131,6 @@ try:
 except Exception as main_e:
     logger.error(f"Ocorreu um erro principal durante o processamento: {main_e}")
 finally:
-    # 🌟 4. Fecha o Writer e faz a limpeza final
     if parquet_writer:
         parquet_writer.close()
     

@@ -1,14 +1,22 @@
 import os
 import logging
-
+import csv
+import time
 import datasus_dbc
 from dbfread import DBF
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-logging.basicConfig(level=logging.INFO)
+# -----------------------------
+# Logging
+# -----------------------------
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# -----------------------------
+# Diretórios 
+# -----------------------------
 
 file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(file_path)
@@ -16,83 +24,128 @@ current_dir = os.path.dirname(file_path)
 scripts_dir = os.path.dirname(os.path.dirname(current_dir))
 base_dir = os.path.dirname(scripts_dir)
 
-dbc_dir = os.path.join(base_dir, "data", "utils", "dbc_datasus_po")
-parquet_dir = os.path.join(base_dir, "data", "raw")
+DBC_DIR = os.path.join(base_dir, "data", "utils", "dbc_datasus_po")
+PARQUET_FINAL_PATH = os.path.join(base_dir, "data", "raw", "raw_painel_de_oncologia.parquet")
+CSV_TEMP_PATH = os.path.join(base_dir, "data", "raw", "raw_painel_de_oncologia_temp.csv")
 
-os.makedirs(parquet_dir, exist_ok=True)
+os.makedirs(os.path.join(base_dir, "data", "raw"), exist_ok=True)
 
-parquet_final_path = os.path.join(parquet_dir, "raw_painel_de_oncologia.parquet")
+# -----------------------------
+# Variáveis de controle
+# -----------------------------
+batch_size = 50_000
+total_registros = 0
+colunas_finais_dinamicas = set()
+parquet_writer = None
 
-arquivos_dbc = [f for f in os.listdir(dbc_dir) if f.lower().endswith(".dbc")]
+# -----------------------------
+# Seleção dos arquivos DBC
+# -----------------------------
+arquivos_dbc = [f for f in os.listdir(DBC_DIR) if f.lower().endswith(".dbc")]
 arquivos_dbc.sort()
 
 if not arquivos_dbc:
-    logger.warning("Nenhum arquivo .DBC encontrado em data/utils/dbc_datasus_po.")
-    raise SystemExit(0)
+    logger.warning(f"Nenhum arquivo .dbc encontrado em {DBC_DIR}.")
+    
+logger.info(f"Arquivos encontrados: {len(arquivos_dbc)}")
 
-logger.info("Iniciando processamento dos arquivos DBC para Parquet único...")
+logger.info("Fase 1: Construindo o Union Schema (Coletando nomes de todas as colunas)...")
+try:
+    for idx, arquivo in enumerate(arquivos_dbc, 1):
+        caminho_dbc = os.path.join(DBC_DIR, arquivo)
+        caminho_dbf = caminho_dbc.replace(".DBC", ".DBF").replace(".dbc", ".dbf")
+        
+        try:
+            if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
+            datasus_dbc.decompress(caminho_dbc, caminho_dbf) 
+            tabela = DBF(caminho_dbf, encoding="latin1")
+            
+            colunas_finais_dinamicas.update(tabela.field_names)
+            
+            os.remove(caminho_dbf)
+        except Exception as e:
+            logger.error(f"❌ Falha na Fase 1 para {arquivo}: {e}")
+            if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
+            continue
+    
+    colunas_finais_dinamicas = sorted(list(colunas_finais_dinamicas))
+    logger.info(f"Union Schema concluído. Total de colunas: {len(colunas_finais_dinamicas)}")
 
-writer = None
-total_geral = 0
+except Exception as e:
+    logger.critical(f"Falha irrecuperável na Fase 1 de Union Schema: {e}")
+    exit(1)
+
+
+logger.info("Fase 2: Processando e escrevendo dados diretamente em Parquet (Batch Mode)...")
 
 try:
-    for arquivo in arquivos_dbc:
-        caminho_dbc = os.path.join(dbc_dir, arquivo)
-        nome_base = os.path.splitext(arquivo)[0]
-        caminho_dbf = os.path.join(dbc_dir, f"{nome_base}.dbf")
+    if not colunas_finais_dinamicas:
+        logger.warning("Union Schema vazio. Finalizando.")
+        raise Exception("Nenhuma coluna detectada para processamento.")
 
-        logger.info(f"=== Arquivo: {arquivo} ===")
-        logger.info(f"Descompactando {arquivo}...")
+    parquet_schema = pa.schema([(name, pa.string()) for name in colunas_finais_dinamicas])
+    parquet_writer = pq.ParquetWriter(PARQUET_FINAL_PATH, parquet_schema)
 
+    for idx, arquivo in enumerate(arquivos_dbc, 1):
+        caminho_dbc = os.path.join(DBC_DIR, arquivo)
+        caminho_dbf = caminho_dbc.replace(".DBC", ".DBF").replace(".dbc", ".dbf")
+
+        logger.info(f"[{idx}/{len(arquivos_dbc)}] Processando {arquivo}...")
+        
         try:
+            if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             datasus_dbc.decompress(caminho_dbc, caminho_dbf)
         except Exception as e:
-            logger.error(f"Falha ao descompactar {arquivo}: {e}")
+            logger.error(f"❌ Falha na descompactação na Fase 2 para {arquivo}: {e}")
             continue
 
-        logger.info(f"Lendo {nome_base}.dbf e escrevendo no Parquet final em chunks...")
-
-        tabela = DBF(caminho_dbf, encoding="latin-1")
-
-        batch_registros = []
-        batch_size = 50_000
-        count_total = 0
-
+        tabela = DBF(caminho_dbf, encoding="latin1")
+        batch = []
+        count = 0
+        
         for registro in tabela:
-            count_total += 1
-            total_geral += 1
-            batch_registros.append(registro)
+            count += 1
+            total_registros += 1
 
-            if len(batch_registros) >= batch_size:
-                df_batch = pd.DataFrame(batch_registros)
-                table = pa.Table.from_pandas(df_batch, preserve_index=False)
+            registro_formatado = {k: str(registro.get(k, "")).strip() for k in colunas_finais_dinamicas}
+            batch.append(registro_formatado)
 
-                if writer is None:
-                    writer = pq.ParquetWriter(parquet_final_path, table.schema)
+            if len(batch) >= batch_size:
+                df = pd.DataFrame(batch, columns=colunas_finais_dinamicas, dtype=str)
+                table = pa.Table.from_pandas(df, schema=parquet_schema, preserve_index=False)
+                
+                parquet_writer.write_table(table)
+                batch.clear()
 
-                writer.write_table(table)
-                batch_registros = []
+        if batch:
+            df = pd.DataFrame(batch, columns=colunas_finais_dinamicas, dtype=str)
+            table = pa.Table.from_pandas(df, schema=parquet_schema, preserve_index=False)
+            parquet_writer.write_table(table)
+            batch.clear()
 
-        if batch_registros:
-            df_batch = pd.DataFrame(batch_registros)
-            table = pa.Table.from_pandas(df_batch, preserve_index=False)
-
-            if writer is None:
-                writer = pq.ParquetWriter(parquet_final_path, table.schema)
-
-            writer.write_table(table)
-
-        logger.info(f"Registros totais em {arquivo}: {count_total}")
+        logger.info(f"{arquivo}: {count} registros processados.")
 
         if os.path.exists(caminho_dbf):
             os.remove(caminho_dbf)
-            logger.info(f"Arquivo temporário {caminho_dbf} removido.")
-
+            logger.info(f"DBF temporário removido: {caminho_dbf}")
+            
+except Exception as main_e:
+    logger.error(f"Ocorreu um erro principal durante o processamento: {main_e}")
 finally:
-    if writer is not None:
-        writer.close()
-        logger.info(f"Parquet final salvo em: {parquet_final_path}")
+    if parquet_writer:
+        parquet_writer.close()
+    
+    if os.path.exists(CSV_TEMP_PATH):
+        os.remove(CSV_TEMP_PATH)
+        logger.info(f"CSV temporário {CSV_TEMP_PATH} removido (não mais usado).")
 
-logger.info("Processamento concluído!")
-logger.info(f"Total de registros em todos os arquivos: {total_geral}")
-logger.info(f"Arquivo único gerado: {parquet_final_path}")
+
+# -----------------------------
+# Conclusão
+# -----------------------------
+if total_registros > 0:
+    logger.info(f"Processamento concluído com sucesso!")
+    logger.info(f"Parquet gerado em: {PARQUET_FINAL_PATH}")
+    logger.info(f"Total de registros processados: {total_registros}")
+else:
+    logger.warning("Nenhum dado processado. Verifique os arquivos DBC.")

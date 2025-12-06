@@ -43,7 +43,7 @@ def load_raw_to_kaggle_if_bucket_updated(ti=None):
 # ----------------------------
 
 with DAG(
-    dag_id='fetch_daily_kaggle_onco360',
+    dag_id='load_daily_kaggle_onco360',
     default_args=default_args,
     description='Pipeline Diária Kaggle Onco-360',
     schedule="0 3 * * *",

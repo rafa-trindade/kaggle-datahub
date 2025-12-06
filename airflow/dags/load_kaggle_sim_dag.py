@@ -43,7 +43,7 @@ def load_raw_to_kaggle_if_bucket_updated(ti=None):
 # ----------------------------
 
 with DAG(
-    dag_id='fetch_daily_kaggle_simbr',
+    dag_id='load_daily_kaggle_simbr',
     default_args=default_args,
     description='Pipeline Diária Kaggle SIM-BR',
     schedule="0 5 * * *",

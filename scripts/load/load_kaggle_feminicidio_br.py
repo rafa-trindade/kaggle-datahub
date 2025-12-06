@@ -11,7 +11,9 @@ DATASET_TITLE = 'feminicidio-br - Pipeline Semanal'
 ARQUIVOS_PARA_ENVIAR = {
     "processed/feminicidio_prelim.parquet": "feminicidio_prelim.parquet",
     "processed/feminicidio_serie_historica.parquet": "feminicidio_serie_historica.parquet",
-    "raw/raw_macroregiao_de_saude.parquet": "geo_macroregiao.parquet"
+    "raw/raw_macroregiao_de_saude.parquet": "geo_macroregiao.parquet",
+    "raw/raw_sim_causas_externas_prelim.parquet": "raw_sim_causas_externas_prelim.parquet",
+    "raw/raw_sim_causas_externas.parquet": "raw_sim_causas_externas.parquet"
 }
 
 api = KaggleApi()
