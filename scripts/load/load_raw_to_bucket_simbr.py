@@ -13,13 +13,15 @@ except ImportError:
 
 BASE_DIR = "/opt/airflow/data"
 RAW_DIR = os.path.join(BASE_DIR, "raw")
-METADADOS_FILE = os.path.join(RAW_DIR, "raw_metadados_simbr.csv")
+METADADOS_FILE = os.path.join(RAW_DIR, "raw_sim_metadados.csv")
 
 ARQUIVOS_PARA_ENVIAR = {
-    "raw_sistema_info_mortalidade_prelim.parquet": "raw_info_mortalidade_prelim.parquet",
-    "raw_sistema_info_mortalidade.parquet": "raw_info_mortalidade.parquet",
-    "raw_macroregiao_de_saude.parquet": "raw_macroregiao.parquet",
-    "raw_metadados_simbr.csv": "raw_metadados_simbr.csv"
+    "raw_sistema_info_mortalidade_prelim.parquet": "raw_sim_geral_prelim.parquet",
+    "raw_sistema_info_mortalidade.parquet": "raw_sim_geral.parquet",
+    "raw_macroregiao_de_saude.parquet": "geo_macroregiao.parquet",
+    "raw_sim_causas_externas_prelim.parquet": "raw_sim_causas_externas_prelim.parquet",
+    "raw_sim_causas_externas.parquet": "raw_sim_causas_externas.parquet",
+    "raw_sim_metadados.csv": "raw_sim_metadados.csv"
 }
 
 load_dotenv()

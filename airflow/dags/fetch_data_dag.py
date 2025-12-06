@@ -84,6 +84,44 @@ def process_datasus_sim_prelim_if_updated(ti=None):
     else:
         print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
 
+def fetch_sim_causas_externas(ti=None):
+    result = subprocess.run(
+        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_sim_causas_externas.py")],
+        capture_output=True,
+        text=True
+    )
+    print(result.stdout)
+    print(result.stderr)
+    updated = result.returncode == 0
+    ti.xcom_push(key="arquivos_atualizados", value=updated)
+    return updated
+
+def process_sim_causas_externas_if_updated(ti=None):
+    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_sim_causas_externas")
+    if arquivos_atualizados:
+        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_sim_causas_externas.py')}")
+    else:
+        print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
+
+def fetch_sim_causas_externas_prelim(ti=None):
+    result = subprocess.run(
+        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_sim_causas_externas_prelim.py")],
+        capture_output=True,
+        text=True
+    )
+    print(result.stdout)
+    print(result.stderr)
+    updated = result.returncode == 0
+    ti.xcom_push(key="arquivos_atualizados", value=updated)
+    return updated
+
+def process_sim_causas_externas_prelim_if_updated(ti=None):
+    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_sim_causas_externas_prelim")
+    if arquivos_atualizados:
+        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_sim_causas_externas_prelim.py')}")
+    else:
+        print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
+
 # ----------------------------
 # Fetch CNES
 # ----------------------------
@@ -144,6 +182,26 @@ with DAG(
         python_callable=process_datasus_sim_prelim_if_updated
     )
 
+    fetch_task_sim_causas_externas = PythonOperator(
+        task_id='fetch_sim_causas_externas',
+        python_callable=fetch_sim_causas_externas
+    )
+
+    process_task_sim_causas_externas = PythonOperator(
+        task_id='process_sim_causas_externas',
+        python_callable=process_sim_causas_externas_if_updated
+    )
+
+    fetch_task_sim_causas_externas_prelim = PythonOperator(
+        task_id='fetch_sim_causas_externas_prelim',
+        python_callable=fetch_sim_causas_externas_prelim
+    )
+
+    process_task_sim_causas_externas_prelim = PythonOperator(
+        task_id='process_sim_causas_externas_prelim',
+        python_callable=process_sim_causas_externas_prelim_if_updated
+    )
+
     fetch_task_cnes = PythonOperator(
         task_id='fetch_cnes',
         python_callable=fetch_cnes
@@ -162,4 +220,6 @@ with DAG(
     fetch_task_datasus_po >> process_task_datasus_po >> \
     fetch_task_datasus_sim >> process_task_datasus_sim >> \
     fetch_task_datasus_sim_prelim >> process_task_datasus_sim_prelim >> \
+    fetch_task_sim_causas_externas >> process_task_sim_causas_externas >> \
+    fetch_task_sim_causas_externas_prelim >> process_task_sim_causas_externas_prelim >> \
     fetch_task_cnes >> fetch_task_macroregiao >> fetch_task_siops

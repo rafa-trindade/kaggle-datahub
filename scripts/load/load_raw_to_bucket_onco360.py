@@ -13,7 +13,7 @@ except ImportError:
 
 BASE_DIR = "/opt/airflow/data"
 RAW_DIR = os.path.join(BASE_DIR, "raw")
-METADADOS_FILE = os.path.join(RAW_DIR, "raw_metadados_onco360.csv")
+METADADOS_FILE = os.path.join(RAW_DIR, "raw_onco360_metadados.csv")
 
 load_dotenv()
 
@@ -58,7 +58,9 @@ def coletar_metadados_raw():
         f for f in os.listdir(RAW_DIR)
         if os.path.isfile(os.path.join(RAW_DIR, f))
         and (f.lower().endswith(".csv") or f.lower().endswith(".parquet"))
-        and f not in [os.path.basename(METADADOS_FILE), "raw_metadados_simbr.csv"]
+        and f not in [os.path.basename(METADADOS_FILE), "raw_sim_metadados.csv"]
+        and f not in [os.path.basename(METADADOS_FILE), "raw_sim_causas_externas_prelim.parquet"]
+        and f not in [os.path.basename(METADADOS_FILE), "raw_sim_causas_externas.parquet"]
     ]
 
     if not arquivos:

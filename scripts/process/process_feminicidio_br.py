@@ -96,38 +96,8 @@ codigos_agressao = {
     "Y083": "Agressão por outros meios mecânicos",
     "Y084": "Agressão por outros meios desconhecidos",
     "Y090": "Agressão por meios não especificados",
-    "Y350": "Intervenção legal envolvendo uso de armas de fogo",
-
-    # CID-9 E960–E978 + E990–E999
-    "E960": "Lesão por luta corpo a corpo",
-    "E961": "Estrangulamento e sufocação",
-    "E962": "Agressão por objeto contundente",
-    "E963": "Agressão por objeto cortante ou penetrante",
-    "E964": "Agressão por meio explosivo",
-    "E965": "Agressão por arma de fogo e munições",
-    "E966": "Agressão por fogo, chama ou substâncias quentes",
-    "E967": "Agressão infligida por cônjuge, parente ou pessoa próxima",
-    "E968": "Outros meios especificados de agressão",
-    "E969": "Meio não especificado de agressão",
-    "E970": "Execução judicial legal",
-    "E971": "Lesão infligida pela polícia ou autoridades",
-    "E972": "Lesão resultante de operações militares",
-    "E973": "Lesão resultante de guerra",
-    "E974": "Lesão por privação / negligência intencional",
-    "E975": "Lesão por tortura",
-    "E976": "Lesão por terrorismo",
-    "E977": "Outras lesões infligidas durante conflito",
-    "E978": "Homicídio por sentença judicial",
-    "E990": "Intervenção legal com armas de fogo",
-    "E991": "Intervenção legal com explosivos",
-    "E992": "Intervenção legal com gás",
-    "E993": "Intervenção legal com força corporal",
-    "E994": "Intervenção legal por armas cortantes / perfurantes",
-    "E995": "Outras intervenções legais especificadas",
-    "E996": "Intervenção legal método não especificado",
-    "E997": "Operações de guerra por armas de fogo",
-    "E998": "Operações de guerra por outros meios",
-    "E999": "Operações de guerra método não especificado"
+    "Y350": "Intervenção legal envolvendo uso de armas de fogo"
+    
 }
 
 # ------------------- Mapeamentos -------------------
@@ -180,8 +150,9 @@ def filtrar_e_mapear(df):
     df['TIPO_OBITO'] = df['TIPO_OBITO'].map(mapa_circobito).fillna("IGNORADO")
     df['GESTANTE'] = df['GESTANTE'].map(mapa_gestante).fillna("IGNORADO")
     df['PUERPERIO'] = df['PUERPERIO'].map(mapa_puerperio).fillna("IGNORADO")
-    df['HORA_OBITO'] = df['HORA_OBITO'].fillna("IGNORADO")
-    
+    df['HORA_OBITO'] = df['HORA_OBITO'].apply(lambda x: "IGNORADO" if pd.isna(x) or str(x).strip() == "" else x)
+    df['DT_NASCIMENTO'] = df['DT_NASCIMENTO'].apply(lambda x: "IGNORADO" if pd.isna(x) or str(x).strip() == "" else x)
+    df['DT_CADASTRO_OBITO'] = df['DT_CADASTRO_OBITO'].apply(lambda x: "IGNORADO" if pd.isna(x) or str(x).strip() == "" else x)
     df['DESCRICAO'] = df['CAUSA_BASICA'].map(codigos_agressao)
     
     df = df[colunas_final]
@@ -224,8 +195,8 @@ colunas_para_leitura = [
     "OBITOGRAV", "OBITOPUERP"
 ]
 
-caminho_sim = os.path.join(raw_dir, "raw_sistema_info_mortalidade.parquet")
-caminho_sim_prelim = os.path.join(raw_dir, "raw_sistema_info_mortalidade_prelim.parquet")
+caminho_sim = os.path.join(raw_dir, "raw_sim_causas_externas.parquet")
+caminho_sim_prelim = os.path.join(raw_dir, "raw_sim_causas_externas_prelim.parquet")
 
 df_fem_serie_historica = processar_arquivo(caminho_sim, colunas_para_leitura)
 df_fem_prelim = processar_arquivo(caminho_sim_prelim, colunas_para_leitura)

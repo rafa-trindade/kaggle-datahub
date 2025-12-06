@@ -14,7 +14,9 @@ venv/
 *.env
 
 *.dbc
+*.DBC
 *.dbf
+*.DBF
 *.log
 latest
 
