@@ -13,7 +13,7 @@ codigos_agressao = {
     "X856": "Homicídio por incêndio, fogo ou chamas",
     "X857": "Homicídio por gases ou vapores",
     "X858": "Homicídio por objeto cortante ou perfurante",
-    "X859": "Homicídio por outros meios X85",
+    "X859": "Homicídio por outros meios",
     "X860": "Agressão por substâncias corrosivas",
     "X861": "Agressão por pesticidas ou produtos químicos",
     "X862": "Agressão por gás ou vapor tóxico",
@@ -33,7 +33,7 @@ codigos_agressao = {
     "X876": "Agressão por objeto contundente",
     "X877": "Agressão por enforcamento ou estrangulamento",
     "X878": "Agressão por afogamento",
-    "X879": "Agressão por outro meio X87",
+    "X879": "Agressão por outros meios especificados",
     "X880": "Agressão por gases e vapores",
     "X881": "Agressão por vapor de água quente",
     "X882": "Agressão por substância corrosiva",
@@ -51,9 +51,9 @@ codigos_agressao = {
     "X894": "Agressão por fogo ou chamas",
     "X895": "Agressão por explosivo",
     "X896": "Agressão por armas de fogo",
-    "X897": "Agressão por outros meios X89",
+    "X897": "Agressão por outros meios especificados",
     "X898": "Agressão por substâncias químicas, local especificado",
-    "X899": "Agressão com mecanismo não especificado",    
+    "X899": "Agressão com mecanismo não especificado",
     "X900": "Agressão por produto químico não especificado",
     "X901": "Agressão por gás ou vapor tóxico",
     "X902": "Agressão por outro produto químico",
@@ -150,7 +150,7 @@ codigos_agressao = {
     "X993": "Agressão por afogamento",
     "X994": "Agressão por fogo ou chamas",
     "X995": "Agressão por explosivo",
-    "X996": "Agressão por outros meios X99",
+    "X996": "Agressão por outros meios especificados",
     "X997": "Agressão por outros meios físicos",
     "X998": "Agressão por outros meios químicos",
     "X999": "Agressão por meios não especificados",
@@ -203,7 +203,7 @@ codigos_agressao = {
     "Y046": "Agressão sexual por outro meio",
     "Y047": "Agressão sexual",
     "Y048": "Agressão sexual por outro meio",
-    "Y049":  "Agressão sexual",
+    "Y049": "Agressão sexual",
     "Y050": "Agressão sexual por força física",
     "Y051": "Agressão sexual por outro meio",
     "Y052": "Agressão sexual",
@@ -255,7 +255,7 @@ codigos_agressao = {
     "Y357": "Intervenção legal envolvendo uso de força corporal",
     "Y358": "Intervenção legal envolvendo uso de outros meios",
     "Y359": "Intervenção legal envolvendo uso de meios não especificados"
-    
+
 }
 
 # ------------------- Mapeamentos -------------------
