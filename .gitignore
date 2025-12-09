@@ -13,19 +13,19 @@ venv/
 .env
 *.env
 
+dbt/logs/
+
 *.dbc
 *.DBC
 *.dbf
 *.DBF
 *.log
-latest
-
-dbt/logs/
-
-
 *.parquet
-
+*PNS_2013.txt
+*PNS_2019.txt
 *1.csv
 *2.csv
 *pns_violencia_2013.csv
 *pns_violencia_2019.csv
+
+latest
