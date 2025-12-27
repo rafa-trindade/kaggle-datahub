@@ -4,3 +4,5 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-06 17:00:19,raw_macroregiao_de_saude.parquet,5570,0.28
 2025-12-06 17:00:19,raw_sim_causas_externas_prelim.parquet,158250,8.14
 2025-12-06 17:00:19,raw_sim_causas_externas.parquet,2646561,129.29
+2025-12-27 21:50:31,raw_sistema_info_mortalidade.parquet,24670230,1214.52
+2025-12-27 21:50:31,raw_sim_causas_externas.parquet,2806095,138.58

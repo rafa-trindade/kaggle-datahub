@@ -9,3 +9,12 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-06 16:57:09,raw_sistema_info_mortalidade_prelim.parquet,1527369,87.87
 2025-12-06 16:57:09,raw_inca_cancer_populacional.parquet,2368916,48.15
 2025-12-06 16:57:09,raw_sistema_info_mortalidade.parquet,23138215,1124.01
+2025-12-10 03:00:04,raw_cnes_estabelecimentos.parquet,595731,67.07
+2025-12-12 03:00:04,raw_cnes_estabelecimentos.parquet,595908,67.08
+2025-12-18 03:00:05,raw_cnes_estabelecimentos.parquet,596402,67.14
+2025-12-19 03:00:05,raw_cnes_estabelecimentos.parquet,596509,67.16
+2025-12-21 03:00:04,raw_cnes_estabelecimentos.parquet,596751,67.19
+2025-12-23 03:00:05,raw_painel_de_oncologia.parquet,5227873,106.08
+2025-12-24 03:00:04,raw_cnes_estabelecimentos.parquet,597384,67.26
+2025-12-27 21:49:09,raw_cnes_estabelecimentos.parquet,597760,67.32
+2025-12-27 21:49:09,raw_sistema_info_mortalidade.parquet,24670230,1214.52
