@@ -19,9 +19,9 @@ SCRIPTS_PATH = "/opt/airflow/scripts"
 # Fetch / Process Painel de Oncologia
 # ----------------------------
 
-def fetch_datasus_po(ti=None):
+def fetch_painel_oncologia(ti=None):
     result = subprocess.run(
-        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_datasus_po.py")],
+        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_painel_oncologia.py")],
         capture_output=True,
         text=True
     )
@@ -31,10 +31,10 @@ def fetch_datasus_po(ti=None):
     ti.xcom_push(key="arquivos_atualizados", value=updated)
     return updated
 
-def process_datasus_po_if_updated(ti=None):
-    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_datasus_po")
+def process_painel_oncologia_if_updated(ti=None):
+    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_painel_oncologia")
     if arquivos_atualizados:
-        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_datasus_po.py')}")
+        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_painel_oncologia.py')}")
     else:
         print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
 
@@ -42,9 +42,9 @@ def process_datasus_po_if_updated(ti=None):
 # Fetch / Process Sistema de Informação sobre Mortalidade (SIM) - Consolidados
 # ----------------------------
 
-def fetch_datasus_sim(ti=None):
+def fetch_sim_declaracao_obito(ti=None):
     result = subprocess.run(
-        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_datasus_sim.py")],
+        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_sim_declaracao_obito.py")],
         capture_output=True,
         text=True
     )
@@ -54,10 +54,10 @@ def fetch_datasus_sim(ti=None):
     ti.xcom_push(key="arquivos_atualizados", value=updated)
     return updated
 
-def process_datasus_sim_if_updated(ti=None):
-    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_datasus_sim")
+def process_sim_declaracao_obito_if_updated(ti=None):
+    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_sim_declaracao_obito")
     if arquivos_atualizados:
-        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_datasus_sim.py')}")
+        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_sim_declaracao_obito.py')}")
     else:
         print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
 
@@ -65,9 +65,9 @@ def process_datasus_sim_if_updated(ti=None):
 # Fetch / Process Sistema de Informação sobre Mortalidade (SIM) - Preliminares
 # ----------------------------
 
-def fetch_datasus_sim_prelim(ti=None):
+def fetch_sim_declaracao_obito_prelim(ti=None):
     result = subprocess.run(
-        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_datasus_sim_prelim.py")],
+        ["python", os.path.join(SCRIPTS_PATH, "extract/datasus/fetch_sim_declaracao_obito_prelim.py")],
         capture_output=True,
         text=True
     )
@@ -77,10 +77,10 @@ def fetch_datasus_sim_prelim(ti=None):
     ti.xcom_push(key="arquivos_atualizados", value=updated)
     return updated
 
-def process_datasus_sim_prelim_if_updated(ti=None):
-    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_datasus_sim_prelim")
+def process_sim_declaracao_obito_prelim_if_updated(ti=None):
+    arquivos_atualizados = ti.xcom_pull(key="arquivos_atualizados", task_ids="fetch_sim_declaracao_obito_prelim")
     if arquivos_atualizados:
-        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_datasus_sim_prelim.py')}")
+        os.system(f"python {os.path.join(SCRIPTS_PATH, 'extract/datasus/process_sim_declaracao_obito_prelim.py')}")
     else:
         print("[INFO] Nenhuma atualização nos arquivos DBC. Pulando processamento.")
 
@@ -153,33 +153,33 @@ with DAG(
 ) as dag:
 
     fetch_task_datasus_po = PythonOperator(
-        task_id='fetch_datasus_po',
-        python_callable=fetch_datasus_po
+        task_id='fetch_painel_oncologia',
+        python_callable=fetch_painel_oncologia
     )
 
     process_task_datasus_po = PythonOperator(
-        task_id='process_datasus_po',
-        python_callable=process_datasus_po_if_updated
+        task_id='process_painel_oncologia',
+        python_callable=process_painel_oncologia_if_updated
     )
 
     fetch_task_datasus_sim = PythonOperator(
-        task_id='fetch_datasus_sim',
-        python_callable=fetch_datasus_sim
+        task_id='fetch_sim_declaracao_obito',
+        python_callable=fetch_sim_declaracao_obito
     )
 
     process_task_datasus_sim = PythonOperator(
-        task_id='process_datasus_sim',
-        python_callable=process_datasus_sim_if_updated
+        task_id='process_sim_declaracao_obito',
+        python_callable=process_sim_declaracao_obito_if_updated
     )
 
     fetch_task_datasus_sim_prelim = PythonOperator(
-        task_id='fetch_datasus_sim_prelim',
-        python_callable=fetch_datasus_sim_prelim
+        task_id='fetch_sim_declaracao_obito_prelim',
+        python_callable=fetch_sim_declaracao_obito_prelim
     )
 
     process_task_datasus_sim_prelim = PythonOperator(
-        task_id='process_datasus_sim_prelim',
-        python_callable=process_datasus_sim_prelim_if_updated
+        task_id='process_sim_declaracao_obito_prelim',
+        python_callable=process_sim_declaracao_obito_prelim_if_updated
     )
 
     fetch_task_sim_causas_externas = PythonOperator(
