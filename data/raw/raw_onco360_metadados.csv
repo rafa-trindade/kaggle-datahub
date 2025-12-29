@@ -6,9 +6,9 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-06 16:57:09,raw_siops_indicadores.parquet,10173,0.18
 2025-12-06 16:57:09,raw_painel_de_oncologia.parquet,5227873,106.07
 2025-12-06 16:57:09,raw_inca_registro_hospitalar.parquet,5399686,111.66
-2025-12-06 16:57:09,raw_sistema_info_mortalidade_prelim.parquet,1527369,87.87
+2025-12-06 16:57:09,raw_sim_declaracao_obito_prelim.parquet,1527369,87.87
 2025-12-06 16:57:09,raw_inca_cancer_populacional.parquet,2368916,48.15
-2025-12-06 16:57:09,raw_sistema_info_mortalidade.parquet,23138215,1124.01
+2025-12-06 16:57:09,raw_sim_declaracao_obito.parquet,23138215,1124.01
 2025-12-10 03:00:04,raw_cnes_estabelecimentos.parquet,595731,67.07
 2025-12-12 03:00:04,raw_cnes_estabelecimentos.parquet,595908,67.08
 2025-12-18 03:00:05,raw_cnes_estabelecimentos.parquet,596402,67.14
@@ -17,4 +17,8 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-23 03:00:05,raw_painel_de_oncologia.parquet,5227873,106.08
 2025-12-24 03:00:04,raw_cnes_estabelecimentos.parquet,597384,67.26
 2025-12-27 21:49:09,raw_cnes_estabelecimentos.parquet,597760,67.32
-2025-12-27 21:49:09,raw_sistema_info_mortalidade.parquet,24670230,1214.52
+2025-12-29 03:27:41,raw_siops_exec_rreo.parquet,33703,0.9
+2025-12-29 03:27:41,raw_siops_exec_saude.parquet,4365,0.1
+2025-12-29 03:27:41,raw_siops_indicadores.parquet,10173,0.16
+2025-12-29 03:29:46,raw_sim_declaracao_obito.parquet,24670230,1214.52
+2025-12-29 03:42:24,raw_cnes_estabelecimentos.parquet,597760,68.11
