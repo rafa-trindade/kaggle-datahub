@@ -16,8 +16,8 @@ RAW_DIR = os.path.join(BASE_DIR, "raw")
 METADADOS_FILE = os.path.join(RAW_DIR, "raw_sim_metadados.csv")
 
 ARQUIVOS_PARA_ENVIAR = {
-    "raw_sistema_info_mortalidade_prelim.parquet": "raw_sim_geral_prelim.parquet",
-    "raw_sistema_info_mortalidade.parquet": "raw_sim_geral.parquet",
+    "raw_sim_declaracao_obito_prelim.parquet": "raw_sim_declaracao_obito_prelim.parquet",
+    "raw_sim_declaracao_obito.parquet": "raw_sim_declaracao_obito.parquet",
     "raw_macroregiao_de_saude.parquet": "geo_macroregiao.parquet",
     "raw_sim_causas_externas_prelim.parquet": "raw_sim_causas_externas_prelim.parquet",
     "raw_sim_causas_externas.parquet": "raw_sim_causas_externas.parquet",
