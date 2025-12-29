@@ -6,6 +6,7 @@ import os
 import time
 import requests
 import pandas as pd
+import duckdb
 from pathlib import Path
 from datetime import datetime
 
@@ -77,18 +78,52 @@ def ultimo_arquivo_estado(pasta: Path, prefixo: str):
 
 def salvar_parquet(output_dir: Path, parquet_file: str):
     csv_files = list(output_dir.glob("*.csv"))
-    if csv_files:
-        df_all = pd.concat([pd.read_csv(f, encoding="utf-8-sig") for f in csv_files])
+    if not csv_files:
+        return
 
-        # Remover a coluna 'municipio' para os Parquets específicos
-        if parquet_file in ["raw_siops_exec_saude.parquet", "raw_siops_exec_rreo.parquet"]:
-            if "municipio" in df_all.columns:
-                df_all = df_all.drop(columns=["municipio"])
+    PARQUET_DIR.mkdir(parents=True, exist_ok=True)
+    parquet_path = PARQUET_DIR / parquet_file
 
-        parquet_path = PARQUET_DIR / parquet_file
-        PARQUET_DIR.mkdir(parents=True, exist_ok=True)
-        df_all.to_parquet(parquet_path, index=False)
-        print(f"\n📦 Parquet gerado: {parquet_path}")
+    con = duckdb.connect(database=":memory:")
+
+    csv_glob = str(output_dir / "*.csv")
+
+    drop_municipio = parquet_file in {
+        "raw_siops_exec_saude.parquet",
+        "raw_siops_exec_rreo.parquet"
+    }
+
+    base_query = f"""
+        FROM read_csv_auto(
+            '{csv_glob}',
+            union_by_name=true,
+            files_to_sniff=-1
+        )
+    """
+
+    if drop_municipio:
+        query = f"""
+        COPY (
+            SELECT * EXCLUDE (municipio)
+            {base_query}
+        )
+        TO '{parquet_path}'
+        (FORMAT PARQUET);
+        """
+    else:
+        query = f"""
+        COPY (
+            SELECT *
+            {base_query}
+        )
+        TO '{parquet_path}'
+        (FORMAT PARQUET);
+        """
+
+    con.execute(query)
+    con.close()
+
+    print(f"\n📦 Parquet gerado com DuckDB: {parquet_path}")
 
 
 # ------------------------------
