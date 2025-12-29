@@ -8,3 +8,5 @@ pyarrow==11.0.0
 fastparquet
 python-dotenv
 kaggle==1.7.4.5
+duckdb==1.4.3
+xlrd==2.0.1
