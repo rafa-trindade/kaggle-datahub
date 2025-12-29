@@ -1,7 +1,3 @@
-'''
-Obtém relatórios do Sistema de Informações sobre Orçamentos Públicos em Saúde - SIOPS
-Baixa dados de Subfunção, RREO e Indicadores, organiza CSVs por pasta e gera Parquet consolidado.
-'''
 import os
 import time
 import requests

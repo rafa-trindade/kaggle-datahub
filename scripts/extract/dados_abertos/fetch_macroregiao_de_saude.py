@@ -1,9 +1,3 @@
-"""
-Obtém lista de municípios com as informações de macrorregião,
-região de saúde e geolocalização
-DuckDB usado apenas onde não quebra
-"""
-
 import os
 import requests
 import zipfile

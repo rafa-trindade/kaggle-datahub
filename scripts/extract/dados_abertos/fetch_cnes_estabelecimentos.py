@@ -1,8 +1,3 @@
-"""
-Obtém todos os estabelecimentos de saúde cadastrados no CNES
-Mesma lógica do pandas, usando DuckDB no processamento
-"""
-
 import os
 import requests
 import zipfile
