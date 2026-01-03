@@ -22,3 +22,7 @@ data_extracao,arquivo,numero_registros,tamanho_mib
 2025-12-29 03:27:41,raw_siops_indicadores.parquet,10173,0.16
 2025-12-29 03:29:46,raw_sim_declaracao_obito.parquet,24670230,1214.52
 2025-12-29 03:42:24,raw_cnes_estabelecimentos.parquet,597760,68.11
+2025-12-31 03:00:06,raw_cnes_estabelecimentos.parquet,597785,68.12
+2026-01-01 03:00:06,raw_cnes_estabelecimentos.parquet,597799,68.1
+2026-01-02 03:00:07,raw_cnes_estabelecimentos.parquet,597897,68.11
+2026-01-03 02:11:44,raw_cnes_estabelecimentos.parquet,598030,68.16
