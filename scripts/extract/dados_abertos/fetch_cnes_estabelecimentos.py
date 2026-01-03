@@ -32,14 +32,14 @@ response = requests.get(url)
 response.raise_for_status()
 
 # -----------------------------
-# Unzip (igual ao pandas)
+# Unzip
 # -----------------------------
 print("Descompactando o arquivo...")
 with zipfile.ZipFile(BytesIO(response.content)) as z:
     csv_name = [n for n in z.namelist() if n.endswith(".csv")][0]
 
     with z.open(csv_name) as csvfile:
-        # DuckDB precisa de caminho → temp file
+
         with tempfile.NamedTemporaryFile(
             suffix=".csv",
             delete=False

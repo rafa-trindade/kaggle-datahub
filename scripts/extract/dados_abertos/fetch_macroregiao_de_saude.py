@@ -20,7 +20,7 @@ utils_dir = os.path.join(base_dir, "data", "utils")
 os.makedirs(parquet_dir, exist_ok=True)
 
 # --------------------------
-# Baixar macroregiao (pandas – como estava)
+# Baixar macroregiao
 # --------------------------
 url = "https://arquivosdadosabertos.saude.gov.br/dados/dbgeral/macroregiao_de_saude.zip"
 parquet_file = os.path.join(
@@ -45,7 +45,7 @@ with zipfile.ZipFile(BytesIO(response.content)) as z:
         )
 
 # --------------------------
-# Ler XLS (pandas – como estava)
+# Ler XLS
 # --------------------------
 geo_path = os.path.join(utils_dir, "macro_geolocalizacao.xls")
 
@@ -53,13 +53,13 @@ print("Lendo arquivo de geolocalização...")
 df_geo = pd.read_excel(geo_path, dtype=str)
 
 # --------------------------
-# Padronização (como estava)
+# Padronização
 # --------------------------
 df["cod_municipio"] = df["cod_municipio"].str.zfill(6)
 df_geo["MUNCOD"] = df_geo["MUNCOD"].str.zfill(6)
 
 # --------------------------
-# DuckDB entra AQUI (parte pesada)
+# DuckDB
 # --------------------------
 print("Fazendo merge com DuckDB...")
 
