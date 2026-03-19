@@ -11,18 +11,15 @@ def criar_regra_dorbr(ano_min: int = None, ano_max: int = None):
     """Gera a regra de validação do arquivo DORBR resolvendo os 2 dígitos."""
     def regra(nome_arquivo: str) -> bool:
         nome = nome_arquivo.upper()
-        # Mudança 1: Procurando por DORBR em vez de DOBR
         if not (nome.startswith("DORBR") and nome.endswith(".DBC")):
             return False
         
-        # Mudança 2: Como DORBR tem 5 letras, o ano começa no índice 5
         ano_str = nome[5:-4]
         if not ano_str.isdigit():
             return False
             
         ano_int = int(ano_str)
         
-        # Resolve o Bug do Milênio: de 79 pra cima é 1900.
         if len(ano_str) == 2:
             ano_completo = 1900 + ano_int if ano_int >= 79 else 2000 + ano_int
         else:

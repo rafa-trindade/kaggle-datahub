@@ -9,7 +9,7 @@ FTP_DIR = "/dissemin/publicos/PAINEL_ONCOLOGIA/DADOS"
 OUTPUT_DIR = "data/landing/dbc_datasus_po"
 
 def regra_dbc_geral(nome_arquivo: str) -> bool:
-    # Para o Painel de Oncologia, basta ser .DBC
+    
     return nome_arquivo.upper().endswith(".DBC")
 
 if __name__ == "__main__":

@@ -14,18 +14,17 @@ def criar_regra_doext(ano_min: int = None, ano_max: int = None):
         if not (nome.startswith("DOEXT") and nome.endswith(".DBC")):
             return False
         
-        # Pega a string do ano ignorando o prefixo "DOEXT" e o sufixo ".DBC"
         ano_str = nome[5:-4]
         if not ano_str.isdigit():
             return False
             
         ano_int = int(ano_str)
         
-        # Resolve o Bug do Milênio (ex: 96 -> 1996, 05 -> 2005)
+        # Resolve o Bug do Milênio
         if len(ano_str) == 2:
             ano_completo = 1900 + ano_int if ano_int >= 79 else 2000 + ano_int
         else:
-            ano_completo = ano_int # Caso o arquivo já venha com 4 dígitos
+            ano_completo = ano_int 
             
         if ano_min is not None and ano_max is not None:
             return ano_min <= ano_completo <= ano_max
@@ -36,7 +35,6 @@ def criar_regra_doext(ano_min: int = None, ano_max: int = None):
 
 FONTES_FTP = [
     {
-        # De volta para a pasta DOFET, onde os arquivos DOEXT vivem escondidos
         "diretorio": "/dissemin/publicos/SIM/CID9/DOFET",
         "regra": criar_regra_doext(1979, 1995), 
         "tipo": "Consolidados"
