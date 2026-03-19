@@ -17,7 +17,7 @@ O pipeline integra diversas bases de dados públicas do Brasil:
 | Fonte | Protocolo | Sistema | Cobertura |
 |---|---|---|---|
 | DATASUS | FTP | SIM/CID-10 - Declarações de óbito e causas externas | 1996–atual |
-| DATASUS | FTP | SIM/CID-9 - Declarações de óbito históricas | 1979–1995 |
+| DATASUS | FTP | SIM/CID-9 - Declarações de óbito e causas externas históricas | 1979–1995 |
 | DATASUS | FTP | Painel de Oncologia | 2013–atual |
 | Dados Abertos MS | HTTP/ZIP | CNES - Cadastro Nacional de Estabelecimentos de Saúde | Atual |
 | Dados Abertos MS | HTTP/ZIP | Macrorregiões de Saúde com geolocalização | Atual |
@@ -27,11 +27,23 @@ O pipeline integra diversas bases de dados públicas do Brasil:
 
 ---
 
+## 📊 Fontes Extras (Análise de Violência/Feminicídio)
+
+| Fonte                        | Tipo                    | Descrição                                                                        | Papel no Projeto                                         | Cobertura  |
+| ---------------------------- | ----------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------- |
+| Dataset Derivado (SIM + CID) | Processado (CSV)        | Série histórica filtrada de óbitos femininos por agressão (CID-10 X85–Y09, Y35)  | Base principal de feminicídio (proxy via mortalidade)    | 1996–atual |
+| IBGE (PNS 2013)              | Microdados (posicional) | Pesquisa Nacional de Saúde com módulo de violência (autodeclarada)               | Contexto social da violência contra mulheres (não letal) | 2013       |
+| IBGE (PNS 2019)              | Microdados (posicional) | Pesquisa mais recente com detalhamento de violência psicológica, física e sexual | Evolução e aprofundamento da violência de gênero         | 2019       |
+
+
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 | Camada | Tecnologia |
 |---|---|
-| Linguagem | Python 3.10+ |
+| Linguagem | Python 3.11 |
 | Processamento analítico | DuckDB |
 | Manipulação de dados | Pandas |
 | Armazenamento (Data Lake) | MinIO - Object Storage compatível com S3 |
@@ -47,31 +59,31 @@ O pipeline integra diversas bases de dados públicas do Brasil:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          FONTES EXTERNAS                            │
-│  FTP DATASUS   │   API SIOPS   │   HTTP/ZIP MS   │   IBGE (manual)  │
+│  FTP DATASUS   │   API SIOPS   │   HTTP/ZIP MS   │       IBGE       │
 └───────┬─────────────────┬──────────────┬──────────────────┬─────────┘
         │                 │              │                  │
         ▼                 ▼              ▼                  ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    1. EXTRACT  (scripts/extract/)                   │
-│  .dbc · .csv · .zip · .txt  →  data/landing/                        │
+│                  1. EXTRACT  (scripts/extract/)                     │
+│             .dbc · .csv · .zip · .txt  →  data/landing/             │
 └─────────────────────────────┬───────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    2. PROCESS  (scripts/process/)                   │
-│  DuckDB SQL + Pandas  →  data/raw/                                  │
+│                  2. PROCESS  (scripts/process/)                     │
+│                DuckDB SQL + Pandas  →  data/raw/                    │
 └─────────────────────────────┬───────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    3. LOAD  (scripts/load/)                         │
-│  Upload incremental boto3  →  MinIO (S3)                            │
+│                   3. LOAD  (scripts/load/)                          │
+│            Upload incremental boto3  →  MinIO (S3)                  │
 └─────────────────────────────┬───────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    4. PUBLISH  (scripts/kaggle/)                    │
-│  MinIO  →  ZIP local  →  Kaggle API  →  Dataset público             │
+│                 4. PUBLISH  (scripts/kaggle/)                       │
+│       MinIO  →  ZIP local  →  Kaggle API  →  Dataset público        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
