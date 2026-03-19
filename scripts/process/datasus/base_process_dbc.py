@@ -79,7 +79,7 @@ def processar_diretorio_dbc(dbc_dir: Path, csv_final_path: Path):
         return
 
     # ---------------------------------------------------------
-    # FASE 2: DuckDB Union & Consolidate para CSV
+    # FASE 2: DuckDB Union e Consolidate para CSV
     # ---------------------------------------------------------
     logger.info("Fase 2: Consolidando todos os Parquets para CSV usando DuckDB...")
     
