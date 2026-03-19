@@ -1,0 +1,15 @@
+from pathlib import Path
+from scripts.process.datasus.base_process_dbc import processar_diretorio_dbc
+
+CURRENT_DIR = Path(__file__).resolve().parent
+BASE_DIR = CURRENT_DIR.parent.parent.parent
+
+DBC_DIR = BASE_DIR / "data" / "landing" / "dbc_datasus_po"
+
+RAW_DIR = BASE_DIR / "data" / "raw" / "datasus" / "painel_de_oncologia"
+RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+CSV_FINAL_PATH = RAW_DIR / "raw_painel_de_oncologia.csv"
+
+if __name__ == "__main__":
+    processar_diretorio_dbc(DBC_DIR, CSV_FINAL_PATH)
