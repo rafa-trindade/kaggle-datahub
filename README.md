@@ -11,7 +11,6 @@ O pipeline coleta dados brutos de fontes governamentais, processa em formatos es
 ---
 
 ## 📊 Fontes de Dados
-
 O pipeline integra diversas bases de dados públicas do Brasil:
 
 | Fonte | Protocolo | Sistema | Cobertura |
@@ -19,6 +18,8 @@ O pipeline integra diversas bases de dados públicas do Brasil:
 | DATASUS | FTP | SIM/CID-10 - Declarações de óbito e causas externas | 1996–atual |
 | DATASUS | FTP | SIM/CID-9 - Declarações de óbito e causas externas históricas | 1979–1995 |
 | DATASUS | FTP | Painel de Oncologia | 2013–atual |
+| INCA | HTTP/CSV | Estimativas de incidência de câncer por população | Atual |
+| INCA | HTTP/CSV | Registro Hospitalar de Câncer (RHC) | Atual |
 | Dados Abertos MS | HTTP/ZIP | CNES - Cadastro Nacional de Estabelecimentos de Saúde | Atual |
 | Dados Abertos MS | HTTP/ZIP | Macrorregiões de Saúde com geolocalização | Atual |
 | SIOPS | API REST | Execução orçamentária em saúde por UF (Subfunções, RREO, Indicadores) | 2013–atual |
@@ -29,13 +30,11 @@ O pipeline integra diversas bases de dados públicas do Brasil:
 
 ## 📊 Fontes Extras (Análise de Violência/Feminicídio)
 
-| Fonte                        | Tipo                    | Descrição                                                                        | Papel no Projeto                                         | Cobertura  |
-| ---------------------------- | ----------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------- |
-| Dataset Derivado (SIM + CID) | Processado (CSV)        | Série histórica filtrada de óbitos femininos por agressão (CID-10 X85–Y09, Y35)  | Base principal de feminicídio (proxy via mortalidade)    | 1996–atual |
-| IBGE (PNS 2013)              | Microdados (posicional) | Pesquisa Nacional de Saúde com módulo de violência (autodeclarada)               | Contexto social da violência contra mulheres (não letal) | 2013       |
-| IBGE (PNS 2019)              | Microdados (posicional) | Pesquisa mais recente com detalhamento de violência psicológica, física e sexual | Evolução e aprofundamento da violência de gênero         | 2019       |
-
-
+| Fonte | Tipo | Descrição | Papel no Projeto | Cobertura |
+| --- | --- | --- | --- | --- |
+| Dataset Derivado (SIM + CID) | Processado (CSV) | Série histórica filtrada de óbitos femininos por agressão (CID-10 X85–Y09, Y35) | Base principal de feminicídio (proxy via mortalidade) | 1996–atual |
+| IBGE (PNS 2013) | Microdados (posicional) | Pesquisa Nacional de Saúde com módulo de violência (autodeclarada) | Contexto social da violência contra mulheres (não letal) | 2013 |
+| IBGE (PNS 2019) | Microdados (posicional) | Pesquisa mais recente com detalhamento de violência psicológica, física e sexual | Evolução e aprofundamento da violência de gênero | 2019 |
 
 ---
 
