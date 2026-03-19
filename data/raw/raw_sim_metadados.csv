@@ -1,8 +1,0 @@
-data_extracao,arquivo,numero_registros,tamanho_mib
-2025-12-06 17:00:19,raw_sim_declaracao_obito_prelim.parquet,1527369,87.87
-2025-12-06 17:00:19,raw_sim_declaracao_obito.parquet,23138215,1124.01
-2025-12-06 17:00:19,raw_macroregiao_de_saude.parquet,5570,0.28
-2025-12-06 17:00:19,raw_sim_causas_externas_prelim.parquet,158250,8.14
-2025-12-06 17:00:19,raw_sim_causas_externas.parquet,2646561,129.29
-2025-12-29 03:28:19,raw_sim_declaracao_obito.parquet,24670230,1214.52
-2025-12-29 03:28:19,raw_sim_causas_externas.parquet,2806095,138.58
