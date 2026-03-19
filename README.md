@@ -6,7 +6,7 @@ Pipeline automatizado de Engenharia de Dados para extração, processamento e pu
 
 O pipeline coleta dados brutos de fontes governamentais, processa em formatos estruturados usando DuckDB e Pandas, carrega em um Data Lake local no MinIO (S3) e sincroniza os datasets tratados diretamente com o Kaggle.
 
-> 📦 Dataset público: [Brazilian Kaggle Datahub](https://www.kaggle.com/datasets)
+> 📦 Dataset público: [Brazilian Kaggle Datahub](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub)
 
 ---
 
