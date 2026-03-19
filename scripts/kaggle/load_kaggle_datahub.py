@@ -12,12 +12,10 @@ from dotenv import load_dotenv
 CURRENT_DIR = Path(__file__).resolve().parent
 BASE_DIR = CURRENT_DIR.parent.parent
 
-# --- O PULO DO GATO PARA AS CREDENCIAIS DO KAGGLE ---
 KAGGLE_DIR = BASE_DIR / ".kaggle"
 KAGGLE_JSON = KAGGLE_DIR / "kaggle.json"
 os.environ['KAGGLE_CONFIG_DIR'] = str(KAGGLE_DIR)
 
-# Corrige o aviso de permissão do kaggle.json automaticamente (chmod 600)
 if KAGGLE_JSON.exists():
     os.chmod(KAGGLE_JSON, 0o600)
 
@@ -71,7 +69,6 @@ def load_lake_to_kaggle():
     logger.info(f"Conectando ao Data Lake (MinIO) no bucket: {MINIO_BUCKET}")
     s3_client = criar_s3_client()
     
-    # Lista todos os arquivos no MinIO (usando paginator caso o lake fique muito grande no futuro)
     paginator = s3_client.get_paginator('list_objects_v2')
     objetos_s3 = []
     
@@ -89,12 +86,10 @@ def load_lake_to_kaggle():
         logger.warning(f"Nenhum arquivo encontrado no bucket {MINIO_BUCKET}. Encerrando.")
         return
 
-    # Inicia a criação do pacote para o Kaggle
     with tempfile.TemporaryDirectory() as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         logger.info(f"Diretório temporário criado: {temp_dir}")
 
-        # Puxa os arquivos do MinIO para o diretório temporário, mantendo as pastas
         for s3_key in objetos_s3:
             destino = temp_dir / s3_key
             destino.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +97,6 @@ def load_lake_to_kaggle():
             logger.info(f"Baixando do Lake: {s3_key}")
             s3_client.download_file(MINIO_BUCKET, s3_key, str(destino))
 
-        # Cria o metadado exigido pelo Kaggle
         metadata = {
             "title": DATASET_TITLE,
             "id": dataset_id,
@@ -117,7 +111,6 @@ def load_lake_to_kaggle():
             
         logger.info("Metadata gerado. Iniciando comunicação com o Kaggle...")
         
-        # Publicação no Kaggle (com a correção do erro 403/404)
         try:
             try:
                 api.dataset_list_files(dataset_id)
@@ -137,7 +130,7 @@ def load_lake_to_kaggle():
                     version_notes=f"Automated Lake Sync - {datetime.now().strftime('%Y-%m-%d')}",
                     delete_old_versions=True,
                     quiet=False,
-                    dir_mode='zip'  # <--- MÁGICA AQUI
+                    dir_mode='zip'  
                 )
                 logger.info(f"✔ Dataset {dataset_id} atualizado com sucesso!")
             else:
@@ -145,7 +138,7 @@ def load_lake_to_kaggle():
                     folder=str(temp_dir), 
                     public=True,
                     quiet=False,
-                    dir_mode='zip'  # <--- MÁGICA AQUI
+                    dir_mode='zip'  
                 )
                 logger.info(f"✔ Dataset {dataset_id} criado com sucesso!")
 
