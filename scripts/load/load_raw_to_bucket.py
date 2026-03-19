@@ -16,7 +16,6 @@ CURRENT_DIR = Path(__file__).resolve().parent
 BASE_DIR = CURRENT_DIR.parent.parent
 RAW_DIR = BASE_DIR / "data" / "raw"
 
-# Carrega as variáveis do .env localizado na raiz do projeto
 load_dotenv(BASE_DIR / ".env")
 
 # -----------------------------
@@ -38,7 +37,7 @@ def criar_s3_client():
         aws_access_key_id=MINIO_ACCESS_KEY,
         aws_secret_access_key=MINIO_SECRET_KEY,
     )
-    # Verifica se o bucket existe, se não, cria
+
     try:
         s3_client.head_bucket(Bucket=MINIO_BUCKET)
     except ClientError:
@@ -51,7 +50,6 @@ def enviar_raw_para_minio() -> bool:
         logger.warning(f"Pasta '{RAW_DIR}' não encontrada. Nada para enviar.")
         return False
 
-    # Pega todos os arquivos recursivamente, ignorando os arquivos .gitkeep
     arquivos = [f for f in RAW_DIR.rglob("*") if f.is_file() and f.name != ".gitkeep"]
     
     if not arquivos:
@@ -65,11 +63,10 @@ def enviar_raw_para_minio() -> bool:
     logger.info(f"Iniciando verificação de {len(arquivos)} arquivo(s)...")
 
     for caminho_local in arquivos:
-        # Pega o caminho relativo à pasta raw. Ex: datasus/arquivo.csv
+
         s3_key = str(caminho_local.relative_to(RAW_DIR)).replace("\\", "/")
         tamanho_local = caminho_local.stat().st_size
         
-        # Verifica direto no MinIO se o arquivo já existe e tem o mesmo tamanho
         precisa_enviar = True
         try:
             response = s3_client.head_object(Bucket=MINIO_BUCKET, Key=s3_key)
@@ -79,11 +76,10 @@ def enviar_raw_para_minio() -> bool:
                 logger.info(f"[SKIP] {s3_key} (já existe no bucket)")
                 precisa_enviar = False
         except ClientError as e:
-            # Se der erro 404, significa que o arquivo não existe, então enviamos
+
             if e.response['Error']['Code'] != '404':
                 logger.error(f"Erro ao consultar '{s3_key}' no MinIO: {e}")
         
-        # Faz o upload se for arquivo novo ou se o tamanho estiver diferente
         if precisa_enviar:
             try:
                 logger.info(f"[UPLOAD] Enviando {s3_key} ...")
