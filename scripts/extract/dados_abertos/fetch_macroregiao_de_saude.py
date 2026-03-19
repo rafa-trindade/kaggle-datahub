@@ -1,85 +1,13 @@
-import os
-import requests
-import zipfile
-import pandas as pd
-import duckdb
-from io import BytesIO
+from scripts.extract.dados_abertos.base_dados_abertos import LANDING_DIR, baixar_e_extrair_csv
 
-# --------------------------
-# Caminhos base
-# --------------------------
-file_path = os.path.abspath(__file__)
-current_dir = os.path.dirname(file_path)
+CSV_DIR = LANDING_DIR / "csv_macroregiao"
 
-scripts_dir = os.path.dirname(os.path.dirname(current_dir))
-base_dir = os.path.dirname(scripts_dir)
+def main():
+    url = "https://arquivosdadosabertos.saude.gov.br/dados/dbgeral/macroregiao_de_saude.zip"
+    landing_file = CSV_DIR / "macroregiao_de_saude_raw.csv"
+    
+    baixar_e_extrair_csv(url, landing_file)
+    print("Lembre-se de garantir que o arquivo 'macro_geolocalizacao.xls' está na pasta Landing.")
 
-parquet_dir = os.path.join(base_dir, "data", "raw")
-utils_dir = os.path.join(base_dir, "data", "utils")
-
-os.makedirs(parquet_dir, exist_ok=True)
-
-# --------------------------
-# Baixar macroregiao
-# --------------------------
-url = "https://arquivosdadosabertos.saude.gov.br/dados/dbgeral/macroregiao_de_saude.zip"
-parquet_file = os.path.join(
-    parquet_dir,
-    "raw_macroregiao_de_saude.parquet"
-)
-
-print("Baixando o arquivo...")
-response = requests.get(url)
-response.raise_for_status()
-
-print("Descompactando o arquivo...")
-with zipfile.ZipFile(BytesIO(response.content)) as z:
-    csv_name = [name for name in z.namelist() if name.endswith(".csv")][0]
-    with z.open(csv_name) as csvfile:
-        print(f"Lendo {csv_name}...")
-        df = pd.read_csv(
-            csvfile,
-            sep=";",
-            encoding="utf-8-sig",
-            dtype=str
-        )
-
-# --------------------------
-# Ler XLS
-# --------------------------
-geo_path = os.path.join(utils_dir, "macro_geolocalizacao.xls")
-
-print("Lendo arquivo de geolocalização...")
-df_geo = pd.read_excel(geo_path, dtype=str)
-
-# --------------------------
-# Padronização
-# --------------------------
-df["cod_municipio"] = df["cod_municipio"].str.zfill(6)
-df_geo["MUNCOD"] = df_geo["MUNCOD"].str.zfill(6)
-
-# --------------------------
-# DuckDB
-# --------------------------
-print("Fazendo merge com DuckDB...")
-
-con = duckdb.connect()
-
-con.register("macro", df)
-con.register("geo", df_geo)
-
-con.execute(f"""
-    COPY (
-        SELECT
-            m.*,
-            g.*
-        FROM macro m
-        LEFT JOIN geo g
-        ON m.cod_municipio = g.MUNCOD
-    )
-    TO '{parquet_file}'
-    (FORMAT PARQUET);
-""")
-
-print(f"Salvando em {parquet_file}...")
-print("Concluído!")
+if __name__ == "__main__":
+    main()

@@ -6,20 +6,20 @@ import duckdb
 from pathlib import Path
 from datetime import datetime
 
+from scripts.extract.dados_abertos.base_dados_abertos import RAW_DIR, LANDING_DIR
+
 # ------------------------------
 # Configurações gerais
 # ------------------------------
 BASE_URL = "https://siops-consulta-publica-api.saude.gov.br/v1"
 
-# Pastas CSV por endpoint
 CSV_DIRS = {
-    "siops_subfuncao": Path("data/utils/csv_siops_subfuncao"),
-    "siops_rro": Path("data/utils/csv_siops_rreo"),
-    "siops_indicador": Path("data/utils/csv_siops_indicador")
+    "siops_subfuncao": LANDING_DIR / "csv_siops_subfuncao",
+    "siops_rro": LANDING_DIR / "csv_siops_rreo",
+    "siops_indicador": LANDING_DIR / "csv_siops_indicador"
 }
 
-# Pastas Parquet consolidadas
-PARQUET_DIR = Path("data/raw")
+PARQUET_DIR = RAW_DIR
 PARQUET_FILES = {
     "siops_subfuncao": "raw_siops_exec_saude.parquet",
     "siops_rro": "raw_siops_exec_rreo.parquet",
@@ -56,7 +56,7 @@ def baixar_json(url):
         data = r.json()
         return data if data else None
     except Exception as e:
-        print(f"❌ Erro ao baixar {url} — {e}")
+        print(f"❌ Erro ao baixar {url} - {e}")
         return None
 
 def ultimo_arquivo_estado(pasta: Path, prefixo: str):
@@ -71,55 +71,6 @@ def ultimo_arquivo_estado(pasta: Path, prefixo: str):
             periodo = int(numeros[4])
             anos_periodos.append((ano, periodo))
     return max(anos_periodos) if anos_periodos else (None, None)
-
-def salvar_parquet(output_dir: Path, parquet_file: str):
-    csv_files = list(output_dir.glob("*.csv"))
-    if not csv_files:
-        return
-
-    PARQUET_DIR.mkdir(parents=True, exist_ok=True)
-    parquet_path = PARQUET_DIR / parquet_file
-
-    con = duckdb.connect(database=":memory:")
-
-    csv_glob = str(output_dir / "*.csv")
-
-    drop_municipio = parquet_file in {
-        "raw_siops_exec_saude.parquet",
-        "raw_siops_exec_rreo.parquet"
-    }
-
-    base_query = f"""
-        FROM read_csv_auto(
-            '{csv_glob}',
-            union_by_name=true,
-            files_to_sniff=-1
-        )
-    """
-
-    if drop_municipio:
-        query = f"""
-        COPY (
-            SELECT * EXCLUDE (municipio)
-            {base_query}
-        )
-        TO '{parquet_path}'
-        (FORMAT PARQUET);
-        """
-    else:
-        query = f"""
-        COPY (
-            SELECT *
-            {base_query}
-        )
-        TO '{parquet_path}'
-        (FORMAT PARQUET);
-        """
-
-    con.execute(query)
-    con.close()
-
-    print(f"\n📦 Parquet gerado com DuckDB: {parquet_path}")
 
 
 # ------------------------------
@@ -140,7 +91,7 @@ def baixar_subfuncao():
             url = f"{BASE_URL}/despesas-por-subfuncao/{uf_code}/{ano}/{periodo}?page=0&size=10000"
             data = baixar_json(url)
             if data is None:
-                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} — pulando")
+                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} - pulando")
                 ano, periodo = proximo_ano_periodo(ano, periodo)
                 continue
             df = pd.DataFrame(data)
@@ -149,8 +100,6 @@ def baixar_subfuncao():
             print(f"✔ Salvo: {file_path} ({len(df)} registros)")
             ano, periodo = proximo_ano_periodo(ano, periodo)
             time.sleep(0.2)
-
-    salvar_parquet(output_dir, PARQUET_FILES["siops_subfuncao"])
 
 def baixar_rreo():
     output_dir = CSV_DIRS["siops_rro"]
@@ -167,7 +116,7 @@ def baixar_rreo():
         url = f"{BASE_URL}/rreo/df/{ano}/{periodo}?page=0&size=10000"
         data = baixar_json(url)
         if data is None:
-            print(f"⚠ Sem dados para DF/{ano}/b{periodo} — pulando")
+            print(f"⚠ Sem dados para DF/{ano}/b{periodo} - pulando")
             ano, periodo = proximo_ano_periodo(ano, periodo)
             continue
         df = pd.DataFrame(data)
@@ -189,7 +138,7 @@ def baixar_rreo():
             url = f"{BASE_URL}/rreo/estadual/{uf_code}/{ano}/{periodo}?page=0&size=10000"
             data = baixar_json(url)
             if data is None:
-                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} — pulando")
+                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} - pulando")
                 ano, periodo = proximo_ano_periodo(ano, periodo)
                 continue
             df = pd.DataFrame(data)
@@ -198,8 +147,6 @@ def baixar_rreo():
             print(f"✔ Salvo: {file_path} ({len(df)} registros)")
             ano, periodo = proximo_ano_periodo(ano, periodo)
             time.sleep(0.3)
-
-    salvar_parquet(output_dir, PARQUET_FILES["siops_rro"])
 
 def normalizar_indicador(df, uf, ano, periodo):
     df["uf"] = uf
@@ -223,7 +170,7 @@ def baixar_indicador():
         url = f"{BASE_URL}/indicador/df/{ano}/{periodo}?page=0&size=10000"
         data = baixar_json(url)
         if data is None:
-            print(f"⚠ Sem dados para DF/{ano}/b{periodo} — pulando")
+            print(f"⚠ Sem dados para DF/{ano}/b{periodo} - pulando")
             ano, periodo = proximo_ano_periodo(ano, periodo)
             continue
         df = normalizar_indicador(pd.DataFrame(data), "DF", ano, periodo)
@@ -245,7 +192,7 @@ def baixar_indicador():
             url = f"{BASE_URL}/indicador/estadual/{uf_code}/{ano}/{periodo}?page=0&size=10000"
             data = baixar_json(url)
             if data is None:
-                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} — pulando")
+                print(f"⚠ Sem dados para {uf_sigla}/{ano}/b{periodo} - pulando")
                 ano, periodo = proximo_ano_periodo(ano, periodo)
                 continue
             df = normalizar_indicador(pd.DataFrame(data), uf_sigla, ano, periodo)
@@ -255,7 +202,6 @@ def baixar_indicador():
             ano, periodo = proximo_ano_periodo(ano, periodo)
             time.sleep(0.2)
 
-    salvar_parquet(output_dir, PARQUET_FILES["siops_indicador"])
 
 # ------------------------------
 # Execução principal
