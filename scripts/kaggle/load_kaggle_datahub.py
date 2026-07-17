@@ -123,6 +123,16 @@ def load_lake_to_kaggle():
     if removidos:
         logger.info(f"✔ {removidos} arquivo(s) órfão(s) removido(s) do cache (não existem mais no bucket).")
 
+    # Se nada foi baixado nem removido, o bucket está idêntico ao que
+    # já está no cache local -- ou seja, idêntico ao que já foi
+    # publicado da última vez que essa execução rodou até o fim com
+    # sucesso. Sem isso, cada execução reenviava os ~13GB inteiros pro
+    # Kaggle mesmo sem nenhuma novidade real (confirmado empiricamente:
+    # duas execuções seguidas, mesmo conteúdo, dois reuploads completos).
+    if baixados == 0 and removidos == 0:
+        logger.info("Nenhuma novidade real desde a última publicação -- pulando o envio ao Kaggle.")
+        return
+
     metadata_path = CACHE_DIR / "dataset-metadata.json"
 
     # Checa se o dataset já existe ANTES de decidir o metadata --

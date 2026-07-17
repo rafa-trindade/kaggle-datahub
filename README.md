@@ -8,15 +8,15 @@ O **DataHub Brasil** nasce de uma necessidade prática: dados públicos brasilei
 
 Este é um hub **bruto e geral** de dados públicos do Brasil: mortalidade, nascimentos, rede assistencial completa (estabelecimentos, habilitações, leitos, profissionais, equipamentos), internações hospitalares, dezenas de doenças de notificação compulsória, população e PIB por município, e os microdados completos da Pesquisa Nacional de Saúde - sem recorte temático, sem filtro de especialidade, sem viés de pesquisa específica. A ideia é justamente o oposto de um recorte: publicar cada sistema por completo, do jeito mais próximo possível do dado oficial, para que qualquer pesquisador possa aplicar seu próprio filtro.
 
+O dataset final está disponível no [Kaggle](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub), com um [notebook de exemplo](https://www.kaggle.com/code/rafatrindade/integra-o-e-vincula-o-de-dados-python) demonstrando como cruzar as bases (mortalidade, população e rede assistencial, por município). Cobre diferentes dimensões da saúde pública e demografia do Brasil: desde onde a rede está habilitada a atender e quantos leitos ela tem, até quem nasce, quem morre, quais doenças são notificadas, e como a população e a economia de cada município evoluem ao longo do tempo.
+
 ---
 
 ## 🏗️ Arquitetura do Pipeline
 
 ![arquitetura](docs/images/arquitetura.png)
 
-
->** não existe uma pasta local persistida com o histórico completo de dados brutos. `data/landing/` é puramente um scratch space temporário - cada arquivo é baixado, processado e enviado direto ao bucket, com o local sendo apagado logo em seguida. A detecção de "isso já existe, não precisa reprocessar" é feita comparando contra um **manifesto** (`_manifest.json`) mantido no próprio bucket, não contra disco local.
-
+> Não existe uma pasta local persistida com o histórico completo de dados brutos. `data/landing/` é puramente um scratch space temporário - cada arquivo é baixado, processado e enviado direto ao bucket, com o local sendo apagado logo em seguida. A detecção de "isso já existe, não precisa reprocessar" é feita comparando contra um **manifesto** (`_manifest.json`) mantido no próprio bucket, não contra disco local.
 
 ---
 
@@ -168,6 +168,7 @@ O pipeline só publica uma nova versão (bucket + Kaggle) quando pelo menos uma 
 
 ---
 
+## 📁 Estrutura de Pastas do Dataset
 
 ```
 sim/
@@ -181,30 +182,30 @@ sim/
   declaracoes_de_obito_infantis_cid10.parquet
   declaracoes_de_obito_maternos_cid10.parquet
   declaracoes_de_obito_residentes_exterior_cid10.parquet
- 
+
 sinasc/
   declaracoes_de_nascido_vivo.parquet
   declaracoes_de_nascido_vivo_exterior.parquet
- 
+
 cnes/
   estabelecimentos_de_saude.parquet
   habilitacoes.parquet
   leitos.parquet
   profissionais.parquet
   equipamentos.parquet
- 
+
 sih/
   aih_reduzida.parquet
   aih_rejeitada.parquet
   servicos_profissionais.parquet
- 
+
 sinan/
   dengue.parquet, tuberculose.parquet, hanseniase.parquet, ...
   (58 arquivos no total -- lista completa em scripts/config/agravos_sinan.py)
- 
+
 geo/
   macroregiao_de_saude.parquet
- 
+
 ibge/
   populacao_estimada.parquet
   pib_municipal.parquet
@@ -217,8 +218,7 @@ metadados.csv          -- manifesto de todos os arquivos: fonte(s), tamanho,
 
 Uma cópia local do `metadados.csv` também fica versionada em `data/metadados.csv`
 neste repositório -- único arquivo persistente em `data/` (todo o resto é
-scratch space temporário, ver Arquitetura do Pipeline abaixo).
-
+scratch space temporário, ver Arquitetura do Pipeline acima).
 
 ---
 
@@ -243,6 +243,12 @@ scratch space temporário, ver Arquitetura do Pipeline abaixo).
 > ⚠️ **Macrorregiões**: o arquivo `macro_geolocalizacao.xls` deve estar presente em `data/landing/csv_macroregiao/` antes de executar o processamento.
 
 A lista completa de fontes, com seus respectivos módulos de extração e processamento, está em `scripts/config/fontes.py`.
+
+**Gerar o manifesto de metadados** (roda a qualquer momento, lista o bucket real e não depende de nenhuma fonte específica ter rodado antes)
+
+```bash
+python -m scripts.process.process_metadados
+```
 
 **Publicação no Kaggle**
 
