@@ -24,5 +24,9 @@ dbt/logs/
 *PNS_2013.txt
 *PNS_2019.txt
 *.csv
+# Exceção: data/metadados.csv é o único artefato persistente/versionado
+# em data/ -- manifesto gerado do dataset publicado, fica no repositório
+# de propósito (ver scripts/process/process_metadados.py)
+!data/metadados.csv
 
 latest

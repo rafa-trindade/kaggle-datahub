@@ -23,6 +23,13 @@ e limpar). Se o disco onde o projeto mora for pequeno (típico em SSD de
 sistema), dá pra apontar LANDING_DIR pra outro disco via variável de
 ambiente KAGGLE_DATAHUB_LANDING_DIR, sem mudar nenhum outro código -- só
 adicionar no .env: KAGGLE_DATAHUB_LANDING_DIR=D:\\kaggle-datahub-landing
+
+Nota 4: PUBLISH_CACHE_DIR (scripts/kaggle/load_kaggle_datahub.py) é uma
+pasta PERSISTENTE (ao contrário de LANDING_DIR/RAW_DIR) -- guarda uma
+cópia local do dataset completo publicado no Kaggle, reaproveitada entre
+execuções pra baixar do bucket só o que mudou. Pode crescer bastante (o
+dataset inteiro, dezenas de GB) -- mesmo mecanismo de override via
+KAGGLE_DATAHUB_PUBLISH_CACHE_DIR no .env.
 """
 import os
 from pathlib import Path
@@ -35,7 +42,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # env.py em várias cadeias de import (ex: base_ftp.py importa bucket_sync,
 # que importa env, que importa BASE_DIR daqui -- só que na primeira vez
 # que paths.py roda, se for ANTES do load_dotenv() de env.py acontecer,
-# o override de LANDING_DIR, RAW_DIR abaixo nunca vê a variável do .env, já que o
+# o override de LANDING_DIR abaixo nunca vê a variável do .env, já que o
 # módulo fica em cache depois da primeira execução). Chamar aqui também
 # garante que funciona não importa a ordem de import.
 load_dotenv(BASE_DIR / ".env")
@@ -43,10 +50,13 @@ load_dotenv(BASE_DIR / ".env")
 DATA_DIR = BASE_DIR / "data"
 
 _landing_override = os.environ.get("KAGGLE_DATAHUB_LANDING_DIR")
-_raw_override = os.environ.get("KAGGLE_DATAHUB_RAW_DIR")
-
 LANDING_DIR = Path(_landing_override) if _landing_override else DATA_DIR / "landing"
-RAW_DIR = Path(_raw_override) if _raw_override else DATA_DIR / "raw"
+
+_publish_cache_override = os.environ.get("KAGGLE_DATAHUB_PUBLISH_CACHE_DIR")
+PUBLISH_CACHE_DIR = Path(_publish_cache_override) if _publish_cache_override else DATA_DIR / "kaggle_publish_cache"
+
+RAW_DIR = DATA_DIR / "raw"
 
 LANDING_DIR.mkdir(parents=True, exist_ok=True)
+PUBLISH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 RAW_DIR.mkdir(parents=True, exist_ok=True)

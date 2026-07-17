@@ -10,6 +10,16 @@ Este é um hub **bruto e geral** de dados públicos do Brasil: mortalidade, nasc
 
 ---
 
+## 🏗️ Arquitetura do Pipeline
+
+![arquitetura](docs/images/arquitetura.png)
+
+
+>** não existe uma pasta local persistida com o histórico completo de dados brutos. `data/landing/` é puramente um scratch space temporário - cada arquivo é baixado, processado e enviado direto ao bucket, com o local sendo apagado logo em seguida. A detecção de "isso já existe, não precisa reprocessar" é feita comparando contra um **manifesto** (`_manifest.json`) mantido no próprio bucket, não contra disco local.
+
+
+---
+
 ## 📊 Fontes de Dados e Escopo
 
 ### **1. Mortalidade (Fonte: SIM - DATASUS)**
@@ -158,7 +168,6 @@ O pipeline só publica uma nova versão (bucket + Kaggle) quando pelo menos uma 
 
 ---
 
-## 📁 Estrutura de Pastas do Dataset
 
 ```
 sim/
@@ -172,36 +181,44 @@ sim/
   declaracoes_de_obito_infantis_cid10.parquet
   declaracoes_de_obito_maternos_cid10.parquet
   declaracoes_de_obito_residentes_exterior_cid10.parquet
-
+ 
 sinasc/
   declaracoes_de_nascido_vivo.parquet
   declaracoes_de_nascido_vivo_exterior.parquet
-
+ 
 cnes/
   estabelecimentos_de_saude.parquet
   habilitacoes.parquet
   leitos.parquet
   profissionais.parquet
   equipamentos.parquet
-
+ 
 sih/
   aih_reduzida.parquet
   aih_rejeitada.parquet
   servicos_profissionais.parquet
-
+ 
 sinan/
   dengue.parquet, tuberculose.parquet, hanseniase.parquet, ...
   (58 arquivos no total -- lista completa em scripts/config/agravos_sinan.py)
-
+ 
 geo/
   macroregiao_de_saude.parquet
-
+ 
 ibge/
   populacao_estimada.parquet
   pib_municipal.parquet
   microdados_pns_2013.txt
   microdados_pns_2019.txt
+
+metadados.csv          -- manifesto de todos os arquivos: fonte(s), tamanho,
+                           contagem de registros, data de modificação
 ```
+
+Uma cópia local do `metadados.csv` também fica versionada em `data/metadados.csv`
+neste repositório -- único arquivo persistente em `data/` (todo o resto é
+scratch space temporário, ver Arquitetura do Pipeline abaixo).
+
 
 ---
 
@@ -216,38 +233,6 @@ ibge/
 | Comunicação S3 | boto3 |
 | Distribuição | Kaggle Python SDK (`kaggle`) |
 | Configuração | python-dotenv |
-
----
-
-## 🏗️ Arquitetura do Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          FONTES EXTERNAS                            │
-│      FTP DATASUS       │      API SIDRA/IBGE     │   HTTP/ZIP MS    │
-└───────────┬─────────────────────────┬───────────────────┬───────────┘
-            │                         │                   │
-            ▼                         ▼                   ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                  1. EXTRACT  (scripts/extract/)                     │
-│         .dbc · .json · .zip  →  data/landing/ (scratch temp)        │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                  2. PROCESS  (scripts/process/)                     │
-│     DuckDB SQL + Pandas → Parquet → upload direto → MinIO (S3)      │
-│         Manifesto por pasta_bucket detecta novidade real            │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                 3. PUBLISH  (scripts/kaggle/)                       │
-│       MinIO  →  ZIP local  →  Kaggle API  →  Dataset público        │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Diferença importante em relação a um pipeline tradicional:** não existe uma pasta local persistida com o histórico completo de dados brutos. `data/landing/` é puramente um scratch space temporário - cada arquivo é baixado, processado e enviado direto ao bucket, com o local sendo apagado logo em seguida. A detecção de "isso já existe, não precisa reprocessar" é feita comparando contra um **manifesto** (`_manifest.json`) mantido no próprio bucket, não contra disco local.
 
 ---
 
