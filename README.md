@@ -4,8 +4,6 @@
 [![Kaggle](https://img.shields.io/badge/Dataset-Kaggle-346B5D?labelColor=123C2F&logo=kaggle&logoColor=ffffff)](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub)
 [![GitHub Stars](https://img.shields.io/github/stars/rafa-trindade/kaggle-datahub?style=flat&labelColor=123C2F&color=346B5D)](https://github.com/rafa-trindade/kaggle-datahub)
 
-## Sobre o Projeto
-
 O **DataHub Brasil** nasce de uma necessidade prática: dados públicos brasileiros de altíssimo valor existem, são gratuitos e são oficiais - mas estão espalhados entre sistemas diferentes do DATASUS e do IBGE, cada um com seu próprio protocolo de acesso, formato de arquivo e convenção de nomenclatura. Reunir qualquer análise minimamente ampla exige garimpar meia dúzia de fontes antes de escrever a primeira linha de código de análise.
 
 Este é um hub **bruto e geral** de dados públicos do Brasil: mortalidade, nascimentos, rede assistencial completa (estabelecimentos, habilitações, leitos, profissionais, equipamentos), internações hospitalares, dezenas de doenças de notificação compulsória, população e PIB por município, e os microdados completos da Pesquisa Nacional de Saúde - sem recorte temático, sem filtro de especialidade, sem viés de pesquisa específica. A ideia é justamente o oposto de um recorte: publicar cada sistema por completo, do jeito mais próximo possível do dado oficial, para que qualquer pesquisador possa aplicar seu próprio filtro.
