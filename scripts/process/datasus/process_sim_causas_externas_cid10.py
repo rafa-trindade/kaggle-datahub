@@ -1,12 +1,17 @@
-from pathlib import Path
-from scripts.process.datasus.base_process_dbc import processar_diretorio_dbc
+"""
+SIM - Causas Externas, CID-10 (1996-atual) -- process
 
-CURRENT_DIR = Path(__file__).resolve().parent
-BASE_DIR = CURRENT_DIR.parent.parent.parent
-DBC_DIR = BASE_DIR / "data" / "landing" / "dbc_sim_causas_externas" / "cid10"
-RAW_DIR = BASE_DIR / "data" / "raw" / "datasus" / "declaracoes_de_obito_causas_externas"
+Consolidados e Preliminares caem na mesma pasta da Landing (ver
+scripts.extract.datasus.fetch_sim_causas_externas_cid10) e viram um
+único Parquet final, mesmo padrão de mesclagem incremental usado em
+declaracao_obito.
+"""
+from scripts.common.paths import LANDING_DIR
+from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 
-CSV_FINAL_PATH = RAW_DIR / "raw_sim_causas_externas_cid10.csv"
+DBC_DIR = LANDING_DIR / "dbc_sim_causas_externas" / "cid10"
+PASTA_BUCKET = "sim"
+NOME_ARQUIVO_FINAL = "declaracoes_de_obito_causas_externas_cid10.parquet"
 
 if __name__ == "__main__":
-    processar_diretorio_dbc(DBC_DIR, CSV_FINAL_PATH)
+    exit(processar_fonte_ftp_incremental(DBC_DIR, PASTA_BUCKET, NOME_ARQUIVO_FINAL))

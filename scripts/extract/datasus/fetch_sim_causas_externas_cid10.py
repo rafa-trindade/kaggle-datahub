@@ -3,9 +3,12 @@ SIMSUS Sistema de Informação sobre Mortalidade (SIM)
 Baixa arquivos .dbc do FTP do DATASUS (SIM - Causas Externas)
 Dados Consolidados (desde 1996) e Dados Preliminares
 """
+from datetime import datetime
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
+from scripts.common.paths import LANDING_DIR
+from scripts.common import exit_codes
 
-OUTPUT_DIR = "data/landing/dbc_sim_causas_externas/cid10"
+OUTPUT_DIR = str(LANDING_DIR / "dbc_sim_causas_externas" / "cid10")
 
 def criar_regra_doext(ano_min: int = None, ano_max: int = None):
     """Gera a regra de validação do arquivo DOEXT com base em um intervalo de anos (4 dígitos)."""
@@ -35,7 +38,7 @@ def criar_regra_doext(ano_min: int = None, ano_max: int = None):
 FONTES_FTP = [
     {
         "diretorio": "/dissemin/publicos/SIM/CID10/DOFET",
-        "regra": criar_regra_doext(1996, 2026), 
+        "regra": criar_regra_doext(1996, datetime.now().year),
         "tipo": "Consolidados"
     },
     {
@@ -45,14 +48,23 @@ FONTES_FTP = [
     }
 ]
 
+PASTA_BUCKET = "sim"
+
 if __name__ == "__main__":
-    houve_atualizacao = False
-    
+    sucesso_geral = True
+    houve_novidade = False
+
     for fonte in FONTES_FTP:
         print(f"Sincronizando dados {fonte['tipo']} do diretório: {fonte['diretorio']}")
-        
-        updated = sincronizar_ftp(fonte["diretorio"], OUTPUT_DIR, fonte["regra"])
-        if updated:
-            houve_atualizacao = True
 
-    exit(0 if houve_atualizacao else 1)
+        sucesso, novidade = sincronizar_ftp(fonte["diretorio"], OUTPUT_DIR, fonte["regra"], pasta_bucket=PASTA_BUCKET)
+        sucesso_geral = sucesso_geral and sucesso
+        houve_novidade = houve_novidade or novidade
+
+    if not sucesso_geral:
+        exit(exit_codes.ERRO)
+    elif not houve_novidade:
+        print("[INFO] Nenhum arquivo novo desde a última execução.")
+        exit(exit_codes.SEM_NOVIDADE)
+    else:
+        exit(exit_codes.SUCESSO)

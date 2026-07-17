@@ -1,12 +1,20 @@
-from pathlib import Path
-from scripts.process.datasus.base_process_dbc import processar_diretorio_dbc
+"""
+SIM - Declaração de Óbito, CID-9 (1979-1995) -- process
 
-CURRENT_DIR = Path(__file__).resolve().parent
-BASE_DIR = CURRENT_DIR.parent.parent.parent
-DBC_DIR = BASE_DIR / "data" / "landing" / "dbc_datasus_sim" / "cid9"
-RAW_DIR = BASE_DIR / "data" / "raw" / "datasus" / "declaracoes_de_obito"
+Diferente do onco-360-foundation (que filtra só óbitos por câncer),
+aqui materializa TODOS os óbitos, sem filtro de causa -- é o hub bruto.
 
-CSV_FINAL_PATH = RAW_DIR / "raw_sim_declaracao_obito_cid09.csv"
+Processa só os .dbc novos/alterados presentes na Landing (o extract já
+pulou os que não mudaram, via manifesto -- ver
+scripts.extract.datasus.fetch_sim_declaracao_obito_cid9), mescla com o
+que já está publicado no bucket, e republica o resultado consolidado.
+"""
+from scripts.common.paths import LANDING_DIR
+from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
+
+DBC_DIR = LANDING_DIR / "dbc_datasus_sim" / "cid9"
+PASTA_BUCKET = "sim"
+NOME_ARQUIVO_FINAL = "declaracoes_de_obito_cid9.parquet"
 
 if __name__ == "__main__":
-    processar_diretorio_dbc(DBC_DIR, CSV_FINAL_PATH)
+    exit(processar_fonte_ftp_incremental(DBC_DIR, PASTA_BUCKET, NOME_ARQUIVO_FINAL))
