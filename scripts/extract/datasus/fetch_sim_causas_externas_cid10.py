@@ -1,8 +1,4 @@
-"""
-SIMSUS Sistema de Informação sobre Mortalidade (SIM) 
-Baixa arquivos .dbc do FTP do DATASUS (SIM - Causas Externas)
-Dados Consolidados (desde 1996) e Dados Preliminares
-"""
+"""SIM - Causas Externas, CID-10 (1996-atual, consolidados + preliminares)."""
 from datetime import datetime
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
@@ -11,7 +7,7 @@ from scripts.common import exit_codes
 OUTPUT_DIR = str(LANDING_DIR / "dbc_sim_causas_externas" / "cid10")
 
 def criar_regra_doext(ano_min: int = None, ano_max: int = None):
-    """Gera a regra de validação do arquivo DOEXT com base em um intervalo de anos (4 dígitos)."""
+    """Valida arquivo DOEXT dentro de intervalo de anos."""
     def regra(nome_arquivo: str) -> bool:
         nome = nome_arquivo.upper()
         if not (nome.startswith("DOEXT") and nome.endswith(".DBC")):

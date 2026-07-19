@@ -1,4 +1,4 @@
-"""SIM-DOINF - Declarações de Óbitos Infantis, CID-9 (1979-1995)."""
+"""SIM - Óbitos Infantis, CID-9 (1979-1995)."""
 from scripts.extract.datasus.base_sim_dofet import executar_fetch
 
 if __name__ == "__main__":

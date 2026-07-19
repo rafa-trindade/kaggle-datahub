@@ -1,8 +1,6 @@
 """
-SIM-DOREXT - Mortalidade de residentes no exterior, 2013-2024.
+SIM - Mortalidade de Residentes no Exterior (2013-atual).
 
-Caminho confirmado (navegado direto no FTP):
-ftp://ftp.datasus.gov.br/dissemin/publicos/SIM/CID10/DOFET/DOREXT13.dbc
 Só existe CID-10 (a série começa em 2013).
 """
 from scripts.extract.datasus.base_sim_dofet import executar_fetch_multiplos

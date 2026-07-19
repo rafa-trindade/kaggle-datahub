@@ -1,5 +1,4 @@
-"""CNES - Equipamentos -- process. Substitui por completo a cada nova
-competência."""
+"""CNES - Equipamentos -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_substituicao_completa
 

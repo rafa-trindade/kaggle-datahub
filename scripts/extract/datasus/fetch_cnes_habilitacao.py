@@ -1,6 +1,4 @@
-"""CNES - Habilitações -- todas as especialidades, sem filtro (diferente
-do onco-360-foundation, que filtra só oncologia). Competência mais
-recente disponível (retrato, não série histórica)."""
+"""CNES - Habilitações por estabelecimento (competência mais recente)."""
 from scripts.extract.datasus.base_cnes import executar_fetch_competencia_atual
 
 DIRETORIO_FTP = "/dissemin/publicos/CNES/200508_/Dados/HB"

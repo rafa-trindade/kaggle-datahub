@@ -1,8 +1,4 @@
-"""
-SIMSUS Sistema de Informação sobre Mortalidade (SIM)
-Baixa arquivos .dbc do FTP do DATASUS (SIM - Declaração de Óbito)
-Dados Consolidados (desde 1996) e Preliminares
-"""
+"""SIM - Declaração de Óbito Geral, CID-10 (1996-atual, consolidados + preliminares)."""
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
 from scripts.common import exit_codes
@@ -10,7 +6,7 @@ from scripts.common import exit_codes
 OUTPUT_DIR = str(LANDING_DIR / "dbc_datasus_sim" / "cid10")
 
 def criar_regra_dobr(ano_minimo: int):
-    """Factory que gera a função de regra baseada no ano de corte."""
+    """Valida arquivo DOBR a partir do ano mínimo."""
     def regra(nome_arquivo: str) -> bool:
         nome = nome_arquivo.upper()
         if not (nome.startswith("DOBR") and nome.endswith(".DBC")):

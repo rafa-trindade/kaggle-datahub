@@ -1,11 +1,6 @@
 """
-Lista de agravos do SINAN a trazer pro hub -- prefixos confirmados
-diretamente na listagem real do FTP (não são chutados).
-
-Cada entrada vira um parquet PRÓPRIO no bucket (sinan/{nome_arquivo}),
-não um arquivo único mesclado -- agravos diferentes têm estruturas de
-campos diferentes entre si, então misturar tudo n uma tabela só não
-faria sentido.
+Agravos SINAN para importar. Cada agravo vira um parquet próprio
+(estruturas de campos diferentes não permitem consolidação).
 """
 
 AGRAVOS_SINAN = [

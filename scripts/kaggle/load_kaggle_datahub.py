@@ -26,8 +26,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # -----------------------------
-# Configurações MinIO -- lidas de env.py, não daqui (era o padrão
-# antigo, cada script lendo as mesmas 4 variáveis por conta própria)
+# MinIO 
 # -----------------------------
 MINIO_ENDPOINT = env.MINIO_ENDPOINT
 if MINIO_ENDPOINT == "http://minio:9000":
@@ -41,12 +40,7 @@ DATASET_NAME = 'brazilian-kaggle-datahub'
 DATASET_TITLE = 'Brazilian Kaggle Datahub'
 FILES_TO_IGNORE = {'.gitkeep', 'raw_lake_metadados.csv'}
 
-# Pasta PERSISTENTE de cache (não temporária) -- definida em
-# scripts/common/paths.py (PUBLISH_CACHE_DIR), configurável via
-# KAGGLE_DATAHUB_PUBLISH_CACHE_DIR no .env. Mantida entre execuções,
-# pra só baixar de novo o que realmente mudou (comparando tamanho
-# local vs remoto, que o list_objects_v2 já devolve de graça, sem
-# chamada extra por arquivo).
+# Cache persistente (definido em paths.py, customizável via .env)
 CACHE_DIR = PUBLISH_CACHE_DIR
 
 # ----------------------------
@@ -93,8 +87,7 @@ def load_lake_to_kaggle():
 
     logger.info(f"Cache persistente: {CACHE_DIR}")
 
-    # Baixa só o que é novo ou mudou de tamanho desde a última
-    # publicação -- reaproveita o que já está no cache local
+    # Baixa só novo/alterado, reaproveita cache quando possível
     baixados = 0
     reaproveitados = 0
     for s3_key, tamanho_remoto in objetos_s3.items():
@@ -110,8 +103,7 @@ def load_lake_to_kaggle():
 
     logger.info(f"✔ {baixados} arquivo(s) baixado(s), {reaproveitados} reaproveitado(s) do cache local.")
 
-    # Limpa do cache local qualquer arquivo que não existe mais no
-    # bucket (evita publicar dado obsoleto/removido na origem)
+    # Remove arquivos órfãos (não existem mais no bucket)
     chaves_esperadas = set(objetos_s3.keys())
     removidos = 0
     for caminho_local in CACHE_DIR.rglob("*"):
@@ -123,23 +115,14 @@ def load_lake_to_kaggle():
     if removidos:
         logger.info(f"✔ {removidos} arquivo(s) órfão(s) removido(s) do cache (não existem mais no bucket).")
 
-    # Se nada foi baixado nem removido, o bucket está idêntico ao que
-    # já está no cache local -- ou seja, idêntico ao que já foi
-    # publicado da última vez que essa execução rodou até o fim com
-    # sucesso. Sem isso, cada execução reenviava os ~13GB inteiros pro
-    # Kaggle mesmo sem nenhuma novidade real (confirmado empiricamente:
-    # duas execuções seguidas, mesmo conteúdo, dois reuploads completos).
+    # Pula se sem mudanças desde última publicação
     if baixados == 0 and removidos == 0:
         logger.info("Nenhuma novidade real desde a última publicação -- pulando o envio ao Kaggle.")
         return
 
     metadata_path = CACHE_DIR / "dataset-metadata.json"
 
-    # Checa se o dataset já existe ANTES de decidir o metadata --
-    # se existir, tenta preservar tags/subtítulo/descrição já
-    # configurados manualmente no Kaggle, em vez de sobrescrever
-    # com um metadata mínimo do zero (bug identificado: isso
-    # apagava configurações manuais a cada publicação).
+    # Verifica se existe; preserva tags/descrição configuradas manualmente
     try:
         api.dataset_list_files(dataset_id)
         dataset_exists = True
@@ -160,12 +143,7 @@ def load_lake_to_kaggle():
             with open(metadata_path, "r") as m:
                 metadata = json.load(m)
 
-            # Bug conhecido da API do Kaggle: às vezes devolve o
-            # metadata com codificação JSON DUPLA -- o arquivo contém
-            # uma STRING que, quando decodificada de novo, é o objeto
-            # real. Sem tratar isso, perderíamos as tags/descrição já
-            # configuradas manualmente por engano (não é erro de
-            # verdade, é só uma camada extra de codificação).
+            # Trata JSON com dupla codificação (quirk da API Kaggle)
             if isinstance(metadata, str):
                 logger.info("Metadata veio com codificação JSON dupla (bug conhecido da API) -- desembrulhando...")
                 metadata = json.loads(metadata)
@@ -174,9 +152,8 @@ def load_lake_to_kaggle():
                 raise TypeError(f"Metadata existente não é um dict mesmo após desembrulhar (veio como {type(metadata).__name__}).")
 
             metadata["id"] = dataset_id  # garante que está certo, independente do que veio
-            metadata["resources"] = []  # deixa a API redetectar a partir dos arquivos
-                                          # realmente presentes no cache, evita referenciar
-                                          # arquivo antigo que não existe mais
+            metadata["resources"] = []  # API redetecta arquivos do cache
+                                        
             logger.info("✔ Metadados existentes preservados com sucesso.")
         except Exception as e:
             logger.warning(f"Não consegui baixar metadados existentes ({e}) -- "
@@ -184,8 +161,7 @@ def load_lake_to_kaggle():
                             f"manualmente podem ser perdidos nesta publicação.")
 
     if metadata is None:
-        # Primeira publicação (dataset novo) ou fallback se o
-        # download de metadata existente falhou.
+        # Primeira publicação ou fallback se download falhou
         metadata = {
             "title": DATASET_TITLE,
             "id": dataset_id,
@@ -198,11 +174,7 @@ def load_lake_to_kaggle():
         m.flush()
         os.fsync(m.fileno())
 
-    # Validação defensiva: confirma que o arquivo que acabamos de
-    # escrever realmente contém um objeto JSON (dict), não uma string
-    # ou outra coisa -- se isso falhar, o erro vai ser bem mais claro
-    # do que o "string indices must be integers" que a biblioteca do
-    # Kaggle dá quando lê um metadata malformado.
+    # Validação: garante metadata válido
     with open(metadata_path, "r") as m:
         conteudo_verificado = json.load(m)
     if not isinstance(conteudo_verificado, dict):

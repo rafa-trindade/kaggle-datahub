@@ -1,30 +1,7 @@
-"""
-SINASC - Sistema de Informações sobre Nascidos Vivos
+"""SINASC - Nascidos Vivos (série histórica 1990+).
 
-Baixa arquivos .dbc do FTP do DATASUS -- Declarações de Nascido Vivo,
-série histórica. Mesma estrutura de FTP/DBC do SIM (base_ftp.py).
-
-Dois diretórios confirmados no FTP do DATASUS (mesma convenção usada em
-outros sistemas, ex: CNES/200508_/):
-  ANT/DNRES        -- dados ANTIGOS (pré-1996), ano em 2 dígitos: DN{UF}{AA}.dbc
-  1996_/Dados/DNRES -- dados NOVOS (1996+), ano em 4 dígitos: DN{UF}{AAAA}.dbc
-
-Achado real: existe também um caminho "NOV/DNRES" com o mesmo padrão de
-nome, mas ele está desatualizado/incompleto (confirmado: só tinha 1 dos
-11 arquivos de DNEX que "1996_/Dados/DNRES" tem) -- usar sempre
-"1996_/Dados/DNRES", não "NOV/DNRES".
-
-Os dois caem na mesma pasta local/bucket -- é a mesma série histórica,
-só dividida pelo DATASUS em dois formatos de nome de arquivo.
-
-Achado real: o DATASUS também publica um arquivo consolidado NACIONAL
-(DNBR{ano}.dbc) ao lado dos arquivos por estado a partir de 2014 -- se
-não for filtrado, duplica todo nascimento de 2014+ (uma vez no arquivo
-do estado, outra no nacional). "BR" não é UF -- o filtro abaixo só
-aceita as 27 UFs reais.
-
-Nascidos no Exterior (DNEX) são uma fonte SEPARADA, não incluída aqui
--- ver fetch_sinasc_dnex.py.
+Dois diretórios: ANT/DNRES (pré-1996, 2 dígitos) e 1996_/Dados/DNRES (1996+, 4 dígitos).
+Filtra por UF válidas (não inclui DNBR consolidado).
 """
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
@@ -51,9 +28,7 @@ def regra_dn_novo(nome_arquivo: str) -> bool:
 
 
 def regra_dn_antigo(nome_arquivo: str) -> bool:
-    """DN{UF}{AA}.dbc -- ano em 2 dígitos (pré-1996). Sem ambiguidade
-    de século (SINASC não existia antes de ~1990), então todo ano de 2
-    dígitos aqui é 19XX."""
+    """DN{UF}{AA}.dbc -- ano em 2 dígitos (pré-1996, sempre 19XX)."""
     nome = nome_arquivo.upper()
     if not (nome.startswith("DN") and nome.endswith(".DBC")):
         return False

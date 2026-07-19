@@ -4,9 +4,7 @@ from pathlib import Path
 from scripts.common.paths import BASE_DIR, RAW_DIR, LANDING_DIR  # noqa: F401
 
 def query_para_parquet(query: str, caminho_parquet: Path, con=None):
-    """Executa uma query no DuckDB e exporta o resultado pra Parquet --
-    formato padrão pros dados principais deste projeto (CSV fica
-    reservado pra arquivos auxiliares, como metadados)."""
+    """Executa query no DuckDB e exporta para Parquet (formato padrão)."""
     fechar_conexao = False
     if con is None:
         con = duckdb.connect()
@@ -26,11 +24,7 @@ def query_para_parquet(query: str, caminho_parquet: Path, con=None):
 
 
 def query_para_csv(query: str, caminho_csv: Path, con=None):
-    """
-    Executa uma query no DuckDB e exporta o resultado diretamente para CSV.
-    Uso reservado a arquivos auxiliares (ex: metadados) -- dados
-    principais devem usar query_para_parquet.
-    """
+    """Executa query no DuckDB e exporta para CSV (apenas arquivos auxiliares)."""
     fechar_conexao = False
     if con is None:
         con = duckdb.connect()

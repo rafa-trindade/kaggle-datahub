@@ -1,10 +1,6 @@
-"""
-Macrorregião de Saúde (geolocalização) -- process
+"""Macrorregião de Saúde (geolocalização) -- process.
 
-Junta o CSV de municípios com o XLS de geolocalização (fornecido
-manualmente), corrigindo zero à esquerda nos dois lados antes do
-merge -- sem isso, municípios com código começando em zero perdem o
-cruzamento silenciosamente.
+Merge CSV + XLS com ajuste de zeros à esquerda em códigos de município.
 """
 import requests
 import pandas as pd
@@ -62,8 +58,7 @@ def main():
         return exit_codes.ERRO
 
     LANDING_CSV.unlink(missing_ok=True)
-    # GEO_PATH (macro_geolocalizacao.xls) NÃO é apagado -- é um arquivo manual,
-    # persistente por natureza (você me pediu explicitamente pra manter).
+    # GEO_PATH não é apagado (arquivo manual, persistente)
 
     try:
         resposta = requests.head(URL_ORIGEM, timeout=30, allow_redirects=True)

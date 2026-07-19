@@ -1,10 +1,6 @@
-"""
-CNES - Estabelecimentos de Saúde -- extract
+"""CNES - Estabelecimentos de Saúde (extract).
 
-Cadastro geral de todos os estabelecimentos de saúde do Brasil, sem
-filtro de especialidade (diferente do onco-360-foundation, que usa
-isso só como insumo interno pro recorte de oncologia -- aqui é
-publicado como fonte própria, cadastro completo).
+Cadastro completo de estabelecimentos de saúde do Brasil.
 """
 import requests
 

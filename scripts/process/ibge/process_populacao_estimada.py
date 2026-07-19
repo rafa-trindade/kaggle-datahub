@@ -1,15 +1,6 @@
-"""
-IBGE - População Estimada por Município -- process
+"""IBGE - População Estimada por Município (process).
 
-Cada JSON baixado corresponde a exatamente um ano -- usa o próprio ano
-como chave de mesclagem (remove a versão antiga desse ano do publicado,
-se houver, antes de adicionar a nova -- protege contra o caso raro do
-IBGE revisar um ano já publicado).
-
-Formato de resposta do SIDRA: uma lista onde o primeiro elemento é um
-dicionário de rótulos dos campos (cabeçalho), e os demais são os dados
-em si -- usamos direto os códigos de campo confirmados (D1C/D1N =
-município código/nome, V = valor da população).
+Mesclagem por ano (remove antiga antes de adicionar nova).
 """
 import json
 import duckdb
@@ -26,6 +17,7 @@ NOME_ARQUIVO_FINAL = "populacao_estimada.parquet"
 
 
 def parse_um_ano(caminho_json, ano: int) -> pd.DataFrame:
+    """Carrega JSON de um ano e retorna DataFrame normalizado."""
     dados = json.loads(caminho_json.read_text(encoding="utf-8"))
     linhas = dados[1:]  # primeiro elemento é o cabeçalho de rótulos, não dado
 

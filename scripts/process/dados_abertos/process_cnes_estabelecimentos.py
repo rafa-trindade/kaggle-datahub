@@ -1,9 +1,4 @@
-"""
-CNES - Estabelecimentos de Saúde -- process
-
-Sem filtro de especialidade -- cadastro completo de todos os
-estabelecimentos de saúde do Brasil.
-"""
+"""CNES - Estabelecimentos de Saúde (process, sem filtro)."""
 import requests
 
 from scripts.common.paths import LANDING_DIR

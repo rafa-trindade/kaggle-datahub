@@ -14,18 +14,11 @@ from scripts.common.paths import BASE_DIR
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Diretório temporário do DuckDB para a fase de consolidação. Antes disso
-# era hardcoded para /mnt/nvme/duckdb_temp/ -- um caminho que só existe
-# numa VPS específica, quebrando em qualquer outra máquina (Windows,
-# outro Linux, CI). Agora é configurável via variável de ambiente, com
-# fallback para uma pasta dentro do próprio projeto.
+# Temp dir DuckDB (configurável via env, fallback no projeto)
 DUCKDB_TEMP_DIR = Path(os.environ.get("DUCKDB_TEMP_DIR", str(BASE_DIR / "data" / ".duckdb_temp")))
 
 def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
-    """Converte todos os .dbc de um diretório pra um único Parquet final
-    consolidado (mesmo padrão de formato do onco-360-foundation -- CSV
-    fica reservado pra arquivos auxiliares, como metadados). Retorna
-    True se gerou o arquivo final com sucesso, False caso contrário."""
+    """Converte .dbc para Parquet consolidado. Retorna True se sucesso."""
     arquivos_dbc = [f for f in os.listdir(dbc_dir) if f.lower().endswith(".dbc")]
     arquivos_dbc.sort()
 
@@ -39,7 +32,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     temp_dir.mkdir(exist_ok=True)
 
     # ---------------------------------------------------------
-    # FASE 1: DBC -> DBF -> Mini Parquet
+    # # Fase 1: DBC -> DBF -> Parquets intermediários
     # ---------------------------------------------------------
     logger.info("Fase 1: Convertendo DBCs para Parquets intermediários (em lotes)...")
     parquets_gerados = []
@@ -65,7 +58,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
             
             for df_chunk in dbf.to_dataframe(chunksize=250_000):
                 df_chunk = df_chunk.astype(str)
-                df_chunk["_ARQUIVO_ORIGEM"] = arquivo  # rastreia de qual .dbc cada linha veio -- necessário pro merge incremental (ver processar_e_publicar_incremental)
+                df_chunk["_ARQUIVO_ORIGEM"] = arquivo   # rastrear origem para merge incremental
                 table = pa.Table.from_pandas(df_chunk)
                 
                 if parquet_writer is None:
@@ -80,20 +73,18 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
             if parquet_writer:
                 parquet_writer.close()
 
-            dbf.f.close()  # simpledbf não fecha o handle sozinho (self.f fica aberto) --
-                            # no Windows, isso impede apagar/substituir o .dbf logo em seguida
-            # --------------------------------------------------------
+            dbf.f.close()  # simpledbf não fecha handle sozinho (impede delete no Windows)
             
             parquets_gerados.append(caminho_parquet_temp)
             os.remove(caminho_dbf)
-            os.remove(caminho_dbc)  # não mantemos o .dbc bruto localmente depois de convertido
+            os.remove(caminho_dbc) 
             
         except Exception as e:
             logger.error(f"❌ Falha ao converter {arquivo}: {e}")
             try:
                 dbf.f.close()
             except (NameError, AttributeError, ValueError):
-                pass  # dbf pode não ter chegado a existir, ou o handle já estar fechado
+                pass  # dbf pode não existir ou handle já estar fechado
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
 
     if not parquets_gerados:
@@ -101,7 +92,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
         return False
 
     # ---------------------------------------------------------
-    # FASE 2: DuckDB Union e Consolidate para Parquet
+    # Fase 2: Consolidar Parquets via DuckDB
     # ---------------------------------------------------------
     logger.info("Fase 2: Consolidando todos os Parquets intermediários num único Parquet final (DuckDB)...")
     
@@ -143,23 +134,10 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
 
 
 def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str) -> bool:
-    """
-    Processa só os .dbc NOVOS/ALTERADOS presentes em dbc_dir -- o
-    extract já filtrou isso via manifesto (ver
-    base_ftp.sincronizar_ftp/scripts.common.bucket_sync) -- funde com o
-    Parquet já publicado no bucket, removendo antes as linhas de
-    qualquer arquivo que esteja sendo reprocessado agora (evita
-    duplicar dado quando o DATASUS revisa um ano já publicado), e
-    republica o resultado.
+    """Processa .dbc novo/alterado e mescla com Parquet já publicado.
 
-    Sem essa mesclagem, como nada fica local entre execuções e o
-    manifesto pula o download de arquivos inalterados, cada execução só
-    veria os arquivos novos -- perderia o histórico já processado em
-    execuções anteriores.
-
-    Tudo via DuckDB (nunca carrega o histórico inteiro em memória
-    Python/pandas) -- essencial aqui, diferente do onco-360-foundation,
-    porque este projeto lida com décadas de dados SEM filtro temático.
+    Evita duplicação quando DATASUS revisa dados; preserva histórico.
+    Usa DuckDB para não sobrecarregar memória.
     """
     from scripts.common.bucket_sync import get_s3_client, upload_and_cleanup
     from scripts.common import env
@@ -229,14 +207,7 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
 
 
 def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str) -> int:
-    """
-    Função de conveniência que junta processar_e_publicar_incremental +
-    atualização do manifesto -- o padrão comum que todo process_*.py de
-    fonte FTP/DBC deste projeto segue. Devolve um código de saída
-    pronto pra `exit()` (scripts.common.exit_codes), pra deixar cada
-    process_*.py com só a configuração específica da fonte (caminhos e
-    nome final), sem repetir essa orquestração em cada um.
-    """
+    """Orquestra processo + manifesto. Retorna exit code (SEM_NOVIDADE/ERRO/SUCESSO)."""
     from scripts.common import exit_codes
     from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto
 
@@ -267,18 +238,10 @@ def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqui
 
 def processar_fonte_ftp_substituicao_completa(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str,
                                                 chave_manifesto_prefixo: str) -> int:
-    """
-    Variante de processar_fonte_ftp_incremental pra fontes que são um
-    RETRATO da competência/versão mais recente, não uma série histórica
-    que acumula (ex: CNES Habilitações/Leitos) -- diferente do SIM, aqui
-    o publicado é SUBSTITUÍDO por completo a cada nova competência, não
-    mesclado com o anterior (senão competências antigas ficariam
-    misturadas com a atual pra sempre).
+    """Processa fontes que são retrato (não série histórica).
 
-    chave_manifesto_prefixo: usado pra limpar do manifesto compartilhado
-    só as entradas dessa fonte (ex: 'HB', 'LT') antes de registrar as
-    novas -- outras fontes que compartilham o mesmo pasta_bucket (ex:
-    Estabelecimentos, que usa HTTP) não são afetadas.
+    Substitui completo, não mescla. chave_manifesto_prefixo limpa
+    entradas antigas desta fonte no manifesto compartilhado.
     """
     from scripts.common import exit_codes
     from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto, upload_and_cleanup

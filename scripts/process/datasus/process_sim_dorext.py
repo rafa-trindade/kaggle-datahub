@@ -1,4 +1,4 @@
-"""SIM-DOREXT - Mortalidade de residentes no exterior -- process."""
+"""SIM - Mortalidade de Residentes no Exterior -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 

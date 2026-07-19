@@ -1,5 +1,4 @@
-"""SIH/SUS - SP (Serviços Profissionais) -- atos médicos realizados
-durante internações, 2008-atual. Ver base_sih.py."""
+"""SIH/SUS - SP (Serviços Profissionais, 2008-atual)."""
 from scripts.extract.datasus.base_sih import executar_fetch
 
 if __name__ == "__main__":

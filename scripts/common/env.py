@@ -1,7 +1,5 @@
 """
-Variáveis de ambiente centrais do projeto -- lidas uma única vez aqui,
-em vez de cada script de load/extract repetir os.environ.get(...) por
-conta própria.
+Variáveis de ambiente centrais do projeto -- lidas uma única vez aqui
 """
 import os
 from pathlib import Path

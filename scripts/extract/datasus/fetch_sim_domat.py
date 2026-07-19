@@ -1,4 +1,6 @@
-"""SIM-DOMAT - Declarações de Óbitos Maternos, 1996-2024. Só existe CID-10."""
+"""SIM - Óbitos Maternos (1996-atual).
+
+Só existe CID-10 (a série começa em 1996)."""
 from scripts.extract.datasus.base_sim_dofet import executar_fetch_multiplos
 
 if __name__ == "__main__":

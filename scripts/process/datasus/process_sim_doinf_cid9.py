@@ -1,4 +1,4 @@
-"""SIM-DOINF - Declarações de Óbitos Infantis, CID-9 -- process."""
+"""SIM - Óbitos Infantis, CID-9 -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 

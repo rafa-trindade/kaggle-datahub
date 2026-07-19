@@ -1,14 +1,7 @@
-"""
-Módulo compartilhado pras fontes do CNES que vêm via FTP, organizadas
-por UF e competência (Habilitações, Leitos) -- mesmo padrão usado no
-onco-360-foundation, mas SEM filtro de especialidade (todas as áreas,
-não só oncologia).
+"""CNES via FTP: fontes organizadas por UF e competência.
 
-Diferença semântica importante em relação ao SIM: CNES não é série
-histórica que acumula ano a ano -- é um RETRATO da competência (mês)
-mais recente disponível. Quando uma competência nova aparece, ela
-SUBSTITUI a anterior por completo (não funde) -- ver
-processar_fonte_ftp_substituicao_completa em base_process_dbc.py.
+CNES é um retrato da competência mais recente -- substitui anterior
+completamente, não funde (diferente do SIM). Ver base_process_dbc.py.
 """
 import re
 import socket
@@ -20,8 +13,7 @@ from scripts.common import exit_codes
 
 
 def achar_competencia_mais_recente(diretorio_ftp: str, prefixo: str) -> str:
-    """Lista o diretório e acha a competência (AAMM, 4 dígitos) mais
-    recente entre os nomes de arquivo -- ex: HBAC2605.dbc -> '2605'."""
+    """Retorna competência (AAMM) mais recente nos arquivos do diretório."""
     ip_v4 = socket.gethostbyname(FTP_HOST)
     with FTPPasvFix() as ftp:
         ftp.connect(ip_v4, 21, timeout=30)
@@ -44,8 +36,7 @@ def achar_competencia_mais_recente(diretorio_ftp: str, prefixo: str) -> str:
 
 
 def executar_fetch_competencia_atual(prefixo: str, diretorio_ftp: str, output_subdir: str):
-    """Acha a competência mais recente, baixa só os arquivos dela
-    (todas as UFs, sem filtro de especialidade)."""
+    """Baixa arquivos da competência mais recente (todas as UFs)."""
     competencia = achar_competencia_mais_recente(diretorio_ftp, prefixo)
     print(f"Competência mais recente encontrada: {competencia}")
 

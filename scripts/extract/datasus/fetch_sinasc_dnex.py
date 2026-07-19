@@ -1,21 +1,17 @@
-"""
-SINASC-DNEX - Declarações de Nascidos Vivos no Exterior
+"""SINASC - Nascidos Vivos no Exterior (DNEX).
 
-Fonte pequena e SEPARADA do SINASC principal (fetch_sinasc.py) --
-brasileiros nascidos fora do país, registrados no sistema. Não pertence
-a nenhuma UF (por isso não se mistura com o arquivo consolidado por
-estado): confirmado como um recorte real e distinto pelo próprio nome
-do arquivo, DNEX{AAAA}.dbc, na mesma pasta do SINASC "novo".
+Separado do SINASC principal, não pertence a UF.
 """
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
 from scripts.common import exit_codes
 
 OUTPUT_DIR = str(LANDING_DIR / "dbc_sinasc_dnex")
-PASTA_BUCKET = "sinasc"  # mesma pasta do SINASC principal -- só o nome do arquivo final é diferente
+PASTA_BUCKET = "sinasc"
 
 
 def regra_dnex(nome_arquivo: str) -> bool:
+    """Valida arquivo DNEX{AAAA}.dbc."""
     nome = nome_arquivo.upper()
     if not (nome.startswith("DNEX") and nome.endswith(".DBC")):
         return False

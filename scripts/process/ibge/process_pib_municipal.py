@@ -1,11 +1,6 @@
-"""
-IBGE - PIB Municipal -- process
+"""IBGE - PIB Municipal (process).
 
-Usa o cabeçalho de rótulos da própria resposta pra nomear as colunas
-(a tabela tem várias variáveis: PIB, PIB per capita, VAB por setor,
-população, deflator -- não são fixas o suficiente pra hardcodar).
-
-Mesmo padrão de mesclagem por ano usado em populacao_estimada.py.
+Usa cabeçalho da resposta para nomear colunas. Mesclagem por ano.
 """
 import json
 import re
@@ -34,6 +29,7 @@ def normalizar_nome_coluna(rotulo: str) -> str:
 
 
 def parse_um_ano(caminho_json, ano: int) -> pd.DataFrame:
+    """Carrega JSON de um ano e retorna DataFrame normalizado."""
     dados = json.loads(caminho_json.read_text(encoding="utf-8"))
     cabecalho = dados[0]
     linhas = dados[1:]

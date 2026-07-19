@@ -1,14 +1,6 @@
-"""
-Macrorregião de Saúde (geolocalização) -- extract
+"""Macrorregião de Saúde (geolocalização) -- extract.
 
-Municípios brasileiros associados às suas macrorregiões de saúde,
-regiões de saúde e coordenadas geográficas -- combina o CSV de
-municípios (Dados Abertos da Saúde) com um arquivo complementar de
-geolocalização.
-
-Nota: precisa do arquivo 'macro_geolocalizacao.xls' colocado
-MANUALMENTE em data/landing/csv_macroregiao/ -- sem isso, o process
-não roda.
+Requer 'macro_geolocalizacao.xls' em data/landing/csv_macroregiao/.
 """
 import requests
 

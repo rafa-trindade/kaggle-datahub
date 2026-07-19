@@ -18,17 +18,8 @@ FTP_HOST = "ftp.datasus.gov.br"
 MAX_RETRIES = 10
 RETRY_DELAY = 5
 
-# -----------------------------------------------------------------------
-# Proxy reverso SOCKS5 (opcional) -- para contornar bloqueio de porta 21
-# em VPS/cloud. Antes deste patch, isso era ativado incondicionalmente
-# na importação do módulo (efeito colateral perigoso: qualquer script que
-# importasse base_ftp.py, mesmo sem precisar de FTP, tinha TODOS os
-# sockets do processo redirecionados para o proxy). Agora é opt-in.
-#
-# Para ativar: configure as variáveis de ambiente abaixo e rode
+# SOCKS5 proxy (opcional) -- configure variáveis de ambiente e rode:
 #   ssh -R 1080 -N usuario@IP_VPS
-# antes de executar os scripts de extract do DATASUS.
-# -----------------------------------------------------------------------
 SOCKS5_PROXY_ENABLED = os.environ.get("SOCKS5_PROXY_ENABLED", "false").lower() in ("1", "true", "yes")
 SOCKS5_PROXY_HOST = os.environ.get("SOCKS5_PROXY_HOST", "127.0.0.1")
 SOCKS5_PROXY_PORT = int(os.environ.get("SOCKS5_PROXY_PORT", "1080"))
@@ -41,14 +32,7 @@ if SOCKS5_PROXY_ENABLED:
 
 
 class FTPPasvFix(FTP):
-    """
-    FTP com correção de PASV: ignora o IP devolvido pelo servidor na
-    resposta 227 (comum estar "errado"/interno quando o servidor está
-    atrás de load balancer/NAT) e conecta sempre no mesmo host já usado
-    na conexão de controle, usando só a porta sugerida. Esse é o fix
-    clássico para "funciona em rede doméstica, falha intermitente em
-    VPS/cloud" com ftplib.
-    """
+    """FTP com correção PASV: usa host real da conexão de controle."""
     def makepasv(self):
         host, port = super().makepasv()
         host_real = self.sock.getpeername()[0]
@@ -67,24 +51,18 @@ def get_tamanho_ftp(ftp: FTP, nome_arquivo: str) -> int | None:
         return None
 
 def _backoff(attempt: int):
-    """Backoff exponencial com jitter, em vez de delay fixo -- evita que
-    retries fiquem sincronizados/martelando o servidor no mesmo instante
-    se houver throttling do lado do DATASUS."""
+    """Backoff exponencial com jitter para evitar retries sincronizados."""
     espera = min(RETRY_DELAY * (2 ** attempt), 120) + random.uniform(0, 3)
     logger.info(f"Aguardando {espera:.1f}s antes de tentar de novo...")
     time.sleep(espera)
 
 def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
                     manifesto: dict[str, int] | None = None) -> tuple[bool, bool]:
-    """Retorna (sucesso, houve_novidade). houve_novidade é False quando o
-    arquivo já estava completo localmente OU já consta no manifesto com
-    o mesmo tamanho (já foi incorporado ao último output publicado) --
-    só True quando algo foi de fato baixado/retomado agora.
+    """Retorna (sucesso, houve_novidade).
 
-    manifesto: {nome_arquivo: tamanho} de arquivos-fonte já incorporados
-    ao último output consolidado publicado (ver
-    scripts.common.bucket_sync.carregar_manifesto) -- evita re-baixar e
-    reprocessar um arquivo que não mudou desde a última execução."""
+    houve_novidade=False se arquivo já existe localmente ou está no manifesto.
+    manifesto evita re-baixar arquivos não modificados.
+    """
     local_path = os.path.join(pasta_saida, nome_arquivo)
     tamanho_ftp = None
 
@@ -150,11 +128,8 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                      pasta_bucket: str | None = None) -> tuple[bool, bool]:
     """Retorna (sucesso, houve_novidade).
 
-    pasta_bucket: se informada, carrega o manifesto dessa pasta UMA VEZ
-    (não um head_object por arquivo) e usa pra decidir quais arquivos
-    pular -- ver scripts.common.bucket_sync.carregar_manifesto. Se não
-    informada, a checagem contra o bucket é pulada (só compara contra
-    disco local)."""
+    pasta_bucket: carrega manifesto uma vez para filtrar arquivos (opcional).
+    """
     ensure_output_dir(output_dir)
     logger.info(f"Conectando a {FTP_HOST} ({ftp_dir}) para listar arquivos...")
     relevantes = []

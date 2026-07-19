@@ -1,14 +1,6 @@
-"""
-IBGE - População Estimada por Município -- extract
+"""IBGE - População Estimada por Município (extract).
 
-Fonte: API SIDRA, tabela 6579 ("Estimativas da População"), variável
-9324 ("População residente estimada"), nível territorial município
-(N6). Confirmado por múltiplas fontes independentes (acadêmicas e
-scripts de terceiros) -- cobre 2001 até o ano mais recente publicado.
-
-Um ano por vez (a API do SIDRA tem limite de linhas por consulta, e
-~5.570 municípios x múltiplos anos de uma vez estouraria isso) -- pula
-anos já baixados anteriormente, via manifesto compartilhado.
+Fonte: API SIDRA, tabela 6579 (2001-atual). Um ano por vez.
 """
 import json
 from datetime import datetime
@@ -62,8 +54,8 @@ if __name__ == "__main__":
             print(f"[SKIP] {ano} -- sem mudança desde a última execução.")
             continue
 
-        destino.write_bytes(resposta.content)  # bytes crus -- garante que o tamanho local
-                                                 # bate exatamente com o checado acima
+        destino.write_bytes(resposta.content)  
+        
         print(f"[OK] {ano}: {len(dados) - 1} municípios baixados.")
         houve_novidade = True
 

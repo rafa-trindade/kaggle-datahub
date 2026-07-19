@@ -1,10 +1,4 @@
-"""
-SINASC - Sistema de Informações sobre Nascidos Vivos -- process
-
-Sem filtro -- materializa todas as Declarações de Nascido Vivo. Mesmo
-padrão de mesclagem incremental usado no SIM (Declaração de Óbito e
-Causas Externas).
-"""
+"""SINASC - Nascidos Vivos -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 

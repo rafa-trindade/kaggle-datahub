@@ -1,7 +1,4 @@
-"""SINAN - process de todos os agravos configurados. Cada agravo vira
-um parquet PRÓPRIO em sinan/{nome_arquivo}.parquet -- não mescla
-agravos diferentes numa tabela só, já que a estrutura de campos varia
-entre eles."""
+"""SINAN - process de todos os agravos (cada um em parquet próprio)."""
 from scripts.common.paths import LANDING_DIR
 from scripts.common import exit_codes
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
@@ -18,7 +15,7 @@ if __name__ == "__main__":
         nome_arquivo_final = f"{nome_arquivo}.parquet"
 
         if not dbc_dir.exists():
-            continue  # esse agravo não teve fetch rodado ainda, ou não teve novidade
+            continue  
 
         print(f"=== {nome_arquivo} ({prefixo}) ===")
         codigo = processar_fonte_ftp_incremental(dbc_dir, PASTA_BUCKET, nome_arquivo_final)
@@ -27,7 +24,7 @@ if __name__ == "__main__":
             algum_sucesso = True
         elif codigo == exit_codes.ERRO:
             algum_erro = True
-        # SEM_NOVIDADE não conta como sucesso nem erro, só pula
+        
 
     if algum_erro and not algum_sucesso:
         exit(exit_codes.ERRO)

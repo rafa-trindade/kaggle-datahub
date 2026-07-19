@@ -1,15 +1,6 @@
-"""
-IBGE - PIB Municipal -- extract
+"""IBGE - PIB Municipal (extract).
 
-Fonte: API SIDRA, tabela 5938 ("Produto interno bruto a preços
-correntes, impostos, líquidos de subsídios, sobre produtos a preços
-correntes e valor adicionado bruto a preços correntes total e por
-atividade econômica"). Essa é a tabela municipal de verdade -- a 6784
-(tentativa anterior) só tem nível Brasil (N1), confirmado empiricamente.
-
-Sem classificações complexas por categoria (diferente de
-Casamentos/Divórcios) -- só múltiplas variáveis por município/ano,
-mesmo padrão simples e já testado de fetch_populacao_estimada.py.
+Fonte: API SIDRA, tabela 5938 (PIB por município e atividade econômica).
 """
 from datetime import datetime
 
@@ -25,11 +16,7 @@ TABELA_SIDRA = 5938
 
 
 def descobrir_nivel_territorial(tabela: int) -> str:
-    """Consulta os metadados e devolve o código de nível territorial
-    mais granular disponível pra essa tabela (preferindo município,
-    'N6', mas caindo pra outro nível se a tabela não suportar N6 --
-    confirmado empiricamente que isso varia por tabela, mesmo quando o
-    nome sugere granularidade municipal)."""
+    """Retorna nível territorial (preferência: N6/município, fallback outro)."""
     url = f"https://servicodados.ibge.gov.br/api/v3/agregados/{tabela}/metadados"
     resposta = requests.get(url, timeout=30)
     resposta.raise_for_status()
@@ -53,14 +40,7 @@ def descobrir_nivel_territorial(tabela: int) -> str:
 
 
 def descobrir_variavel_e_classificacoes(tabela: int) -> tuple[int, dict[int, int]]:
-    """Devolve (id_da_variavel_principal, {id_classificacao:
-    id_categoria_total}) -- mesmo problema identificado em
-    Casamentos/Divórcios: usar 'v/all' e deixar classificações
-    implícitas expande o volume da consulta sem que o cálculo perceba.
-    Aqui, pega só a variável principal e fixa toda classificação na
-    categoria 'Total' (id 0, convenção do SIDRA) -- suficiente pra essa
-    tabela, que não tem a mesma necessidade de detalhamento por
-    categoria que Casamentos/Divórcios tinha."""
+    """Retorna (variável_principal, {classificação_id: categoria_total})."""
     url = f"https://servicodados.ibge.gov.br/api/v3/agregados/{tabela}/metadados"
     resposta = requests.get(url, timeout=30)
     resposta.raise_for_status()

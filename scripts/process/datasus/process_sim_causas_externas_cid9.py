@@ -1,10 +1,4 @@
-"""
-SIM - Causas Externas, CID-9 (1979-1995) -- process
-
-Sistema separado do DATASUS (DOFET), não é um filtro sobre a
-Declaração de Óbito geral -- óbitos por causas externas (acidentes,
-violência) têm seu próprio conjunto de arquivos na origem.
-"""
+"""SIM - Causas Externas, CID-9 (1979-1995) -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 

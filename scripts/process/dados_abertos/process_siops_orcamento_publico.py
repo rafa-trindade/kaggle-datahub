@@ -1,6 +1,8 @@
+"""SIOPS - Consolidação de CSVs por categoria."""
 from scripts.process.dados_abertos.base_process_abertos import LANDING_DIR, RAW_DIR, query_para_csv
 
 def consolidar_pasta_siops(nome_pasta: str, nome_arquivo_saida: str, drop_municipio: bool = False):
+    """Consolida CSVs de uma pasta em um único arquivo."""
     pasta_input = LANDING_DIR / nome_pasta
     csv_final = RAW_DIR / "dados_abertos" / "siops_orcamento_publico" /  nome_arquivo_saida
 

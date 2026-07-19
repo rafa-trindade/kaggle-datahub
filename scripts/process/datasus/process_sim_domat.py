@@ -1,4 +1,4 @@
-"""SIM-DOMAT - Declarações de Óbitos Maternos -- process."""
+"""SIM - Óbitos Maternos -- process."""
 from scripts.common.paths import LANDING_DIR
 from scripts.process.datasus.base_process_dbc import processar_fonte_ftp_incremental
 

@@ -1,4 +1,4 @@
-"""SIM-DOFET - Declarações de Óbitos Fetais, CID-10 (1996-2024)."""
+"""SIM - Óbitos Fetais, CID-10 (1996-atual)."""
 from scripts.extract.datasus.base_sim_dofet import executar_fetch_multiplos
 
 if __name__ == "__main__":

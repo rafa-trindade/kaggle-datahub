@@ -1,25 +1,6 @@
-"""
-Gera metadados.csv na raiz do bucket/dataset -- manifesto de todos os
-arquivos publicados, com fonte(s) relacionada(s), tamanho, contagem de
-registros (parquet, lida só do rodapé/metadata do arquivo -- sem
-baixar o arquivo inteiro, importante dado que SIH/SIM têm parquets de
-vários GB) e data de modificação.
+"""Gera metadados.csv: manifesto de arquivos publicados com metadados.
 
-Diferente do onco-360-foundation (que compara contra uma lista fixa de
-"arquivos_saida" esperados por Fonte, cruzando com data/raw/ local):
-aqui listamos o BUCKET REAL primeiro. Duas razões pra essa escolha:
-
-  1. Este projeto não persiste nada localmente entre execuções (ver
-     scripts/config/fontes.py) -- não existe um "data/raw/" pra
-     escanear como no onco-360.
-  2. Fontes como o SINAN produzem 58 arquivos dinamicamente (um por
-     agravo, ver scripts/config/agravos_sinan.py) -- não dá pra manter
-     uma lista de 58 nomes de arquivo no registro central sem
-     duplicar informação que já vive em agravos_sinan.py.
-
-A granularidade de "fonte" no manifesto fica no nível de PASTA
-(pasta_bucket), já que várias Fontes do registro compartilham a mesma
-pasta (ex: as 10 fontes do SIM todas têm pasta_bucket="sim").
+Lê metadata do parquet (não baixa arquivo inteiro). Agrupa por pasta_bucket.
 """
 import csv
 from collections import defaultdict
@@ -38,8 +19,7 @@ COLUNAS = ["arquivo", "pasta", "fontes_relacionadas", "tamanho_bytes", "num_regi
 
 
 def _descricao_por_pasta() -> dict[str, str]:
-    """Agrupa as Fontes do registro por pasta_bucket -- várias Fontes
-    costumam cair na mesma pasta (ex: SIM inteiro em pasta_bucket='sim')."""
+    """Agrupa Fontes por pasta_bucket."""
     agrupado = defaultdict(list)
     for f in FONTES:
         agrupado[f.pasta_bucket].append(f.nome)
@@ -58,8 +38,7 @@ def _montar_s3_filesystem() -> pafs.S3FileSystem:
 
 
 def _contar_registros_parquet(s3_fs: pafs.S3FileSystem, bucket: str, key: str) -> int | None:
-    """Lê só o rodapé/metadata do parquet (não baixa o arquivo inteiro
-    -- importante pros parquets de vários GB do SIH/SIM)."""
+    """Lê metadata do parquet (não baixa arquivo inteiro)."""
     try:
         caminho_s3 = f"{bucket}/{key}"
         pf = pq.ParquetFile(caminho_s3, filesystem=s3_fs)
@@ -107,10 +86,7 @@ def main():
     print(f"Listando bucket {env.MINIO_BUCKET} e contando registros dos parquets...")
     linhas = gerar_linhas(s3_client, s3_fs, env.MINIO_BUCKET, descricoes)
 
-    # Salva em data/metadados.csv -- PERSISTENTE, fica no repositório
-    # (diferente de tudo mais em data/, que é efêmero) -- serve de
-    # referência rápida do que está no dataset sem precisar acessar o
-    # bucket ou o Kaggle.
+    # Salva localmente (persistente) e no bucket
     with open(CAMINHO_LOCAL_PERSISTENTE, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=COLUNAS)
         writer.writeheader()

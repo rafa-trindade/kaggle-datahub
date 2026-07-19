@@ -1,30 +1,14 @@
 """
 Registro central de todas as fontes de dados do pipeline.
 
-Este projeto é um hub bruto: publica num ÚNICO dataset Kaggle
-(brazilian-kaggle-datahub), organizado em SUBPASTAS por fonte -- e num
-único bucket MinIO (kaggle-datahub) com a mesma organização.
-
-Diferença estrutural chave em relação ao onco-360-foundation: os dados
-são muito mais pesados aqui (bases nacionais SEM filtro temático), então
-NADA fica persistido localmente entre execuções -- o pipeline baixa pra
-um temp local, processa, sobe pro bucket, e apaga o temp. A detecção de
-"já tem isso, não precisa refazer" compara contra o BUCKET (via
-scripts.common.bucket_sync), não contra disco local como no onco-360.
-
-Para adicionar uma fonte nova:
-  1. Escreva o extract/process normalmente, seguindo o padrão das fontes
-     existentes (base_<fonte>.py + script(s) específico(s)).
-  2. Adicione uma entrada em FONTES abaixo, com a pasta de destino no
-     bucket/dataset (pasta_bucket).
-  3. Pronto -- run_all.py, load_to_bucket.py e load_to_kaggle.py já
-     pegam automaticamente.
+Cada fonte publica em subpasta própria (bucket e dataset Kaggle).
+Dados não persistem localmente -- processados e publicados no bucket.
+run_all.py e load_*.py pegam automaticamente as fontes registradas.
 """
 from dataclasses import dataclass, field
 
 DATASET_KAGGLE = "brazilian-kaggle-datahub"
-# Nome do bucket MinIO vem de MINIO_BUCKET no .env (scripts.common.env),
-# não é fixo aqui -- ver scripts/common/bucket_sync.py
+# ver scripts/common/bucket_sync.py
 
 
 @dataclass(frozen=True)

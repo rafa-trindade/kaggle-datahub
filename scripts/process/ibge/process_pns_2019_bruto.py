@@ -1,5 +1,7 @@
-"""PNS/IBGE 2019 -- process (bruto). Ver process_pns_2013_bruto.py pro
-raciocínio completo -- mesma lógica, arquivo diferente."""
+"""PNS/IBGE 2019 -- process (bruto, sem decodificação).
+
+Microdados .txt publicados como estão. Requer dicionário IBGE para decodificar.
+"""
 from scripts.common.paths import LANDING_DIR
 from scripts.common import exit_codes
 from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto, upload_and_cleanup

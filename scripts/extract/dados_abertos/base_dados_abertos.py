@@ -10,12 +10,8 @@ from scripts.common.paths import BASE_DIR, RAW_DIR, LANDING_DIR  # noqa: F401
 # Funções Utilitárias Reutilizáveis
 # -----------------------------------------
 def verificar_novidade_http(url: str, pasta_bucket: str, chave_manifesto: str) -> tuple[bool, int]:
-    """Retorna (houve_novidade, tamanho_remoto). Compara o Content-Length
-    da URL contra o manifesto no bucket -- mesma ideia do manifesto usado
-    nas fontes FTP (scripts.common.bucket_sync), adaptado pra fontes HTTP
-    de arquivo único (sem listagem de diretório pra comparar item a
-    item). Se o servidor não informar Content-Length, trata como
-    novidade sempre (mais seguro que arriscar pular um dado que mudou)."""
+    """Retorna (houve_novidade, tamanho_remoto). Compara Content-Length
+    contra manifesto no bucket. Se falta Content-Length, assume novidade."""
     from scripts.common.bucket_sync import carregar_manifesto
 
     resposta = requests.head(url, timeout=30, allow_redirects=True)

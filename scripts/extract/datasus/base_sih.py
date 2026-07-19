@@ -1,20 +1,7 @@
-"""
-Módulo compartilhado pras 3 fontes do SIH/SUS (RD, RJ, SP) -- todas
-vivem na mesma pasta FTP, diferenciadas só pelo prefixo do arquivo:
+"""SIH/SUS (RD, RJ, SP) -- série histórica acumulativa desde 2008.
 
-  RD{UF}{AAMM}.dbc -- AIH Reduzida (internações aprovadas p/ pagamento)
-  RJ{UF}{AAMM}.dbc -- AIH Rejeitadas
-  SP{UF}{AAMM}.dbc -- Serviços Profissionais (atos médicos)
-
-Confirmado (múltiplas fontes independentes, incluindo o pacote R
-microdatasus): série moderna a partir de 2008 fica em
-SIHSUS/200801_/Dados/ -- só essa série é usada aqui (a série antiga,
-1992-2007, foi deixada de fora por decisão do usuário, dado o volume
-total envolvido).
-
-Diferente do CNES (retrato do mês mais recente): SIH é série histórica
-que ACUMULA mês a mês, mesmo padrão do SIM -- usa merge incremental,
-não substituição completa.
+RD{UF}{AAMM}.dbc, RJ{UF}{AAMM}.dbc, SP{UF}{AAMM}.dbc diferenciadas
+por prefixo. Usa merge incremental (diferente de CNES).
 """
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
@@ -25,6 +12,7 @@ PASTA_BUCKET = "sih"
 
 
 def criar_regra(prefixo: str):
+    """Regra de filtro: {prefixo}{UF}{AAMM}.dbc"""
     def regra(nome_arquivo: str) -> bool:
         nome = nome_arquivo.upper()
         if not (nome.startswith(prefixo) and nome.endswith(".DBC")):

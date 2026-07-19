@@ -1,12 +1,6 @@
-"""
-Módulo compartilhado do SINAN -- itera pela lista de agravos em
-scripts.config.agravos_sinan, sincronizando cada um contra os dois
-diretórios do FTP (FINAIS = anos fechados, PRELIM = ano corrente,
-mesmo padrão dual-pasta já usado no SIM pra DO/DOEXT).
+"""SINAN -- sincroniza agravos contra FINAIS (histórico) e PRELIM (corrente).
 
-Arquivos: {PREFIXO}BR{AA}.dbc -- um por ano, Brasil inteiro (não
-particionado por UF como SIM/SIH), então o volume por agravo é bem
-menor.
+Arquivos: {PREFIXO}BR{AA}.dbc (Brasil inteiro, sem UF).
 """
 from scripts.extract.datasus.base_ftp import sincronizar_ftp
 from scripts.common.paths import LANDING_DIR
@@ -25,15 +19,13 @@ def criar_regra(prefixo: str):
         if not (nome.startswith(prefixo) and nome.endswith(".DBC")):
             return False
         resto = nome[len(prefixo):-4]
-        # resto = "BR" + ano de 2 dígitos = 4 caracteres (SINAN é Brasil
-        # inteiro, sem UF -- diferente do SIH, que tem UF de 2 letras)
+        # resto = "BR" + ano 2 dígitos (Brasil inteiro, sem UF)
         return len(resto) == 4 and resto[:2] == "BR" and resto[2:].isdigit()
     return regra
 
 
 def executar_fetch_um_agravo(prefixo: str, output_subdir: str) -> tuple[bool, bool]:
-    """Sincroniza um agravo contra os dois diretórios. Devolve
-    (sucesso_geral, houve_novidade)."""
+    """Sincroniza um agravo contra ambos diretórios."""
     output_dir = str(LANDING_DIR / output_subdir)
     regra = criar_regra(prefixo)
 
@@ -48,9 +40,7 @@ def executar_fetch_um_agravo(prefixo: str, output_subdir: str) -> tuple[bool, bo
 
 
 def executar_fetch_todos_agravos(agravos: list[tuple[str, str]]):
-    """Roda o fetch pra TODOS os agravos configurados, um de cada vez.
-    Não para no primeiro erro -- um agravo com problema não deve
-    travar os outros 57."""
+    """Roda fetch para todos agravos. Não para no primeiro erro."""
     algum_sucesso = False
     algum_erro = False
     algum_novo = False

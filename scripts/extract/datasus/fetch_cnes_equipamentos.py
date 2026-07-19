@@ -1,6 +1,4 @@
-"""CNES - Equipamentos -- todos os equipamentos cadastrados por
-estabelecimento (raio-X, ressonância, tomógrafo etc). Competência mais
-recente (retrato, não série histórica)."""
+"""CNES - Equipamentos por estabelecimento (competência mais recente)."""
 from scripts.extract.datasus.base_cnes import executar_fetch_competencia_atual
 
 DIRETORIO_FTP = "/dissemin/publicos/CNES/200508_/Dados/EQ"
