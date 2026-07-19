@@ -14,12 +14,11 @@ from scripts.common.bucket_sync import get_s3_client
 from scripts.config.fontes import FONTES
 
 NOME_ARQUIVO_SAIDA = "datahub-metadados.csv"
-CAMINHO_LOCAL_PERSISTENTE = DATA_DIR / NOME_ARQUIVO_SAIDA  # fica no repositório, não é apagado
-COLUNAS = ["arquivo", "pasta", "fontes_relacionadas", "tamanho_bytes", "num_registros", "data_modificacao"]
+CAMINHO_LOCAL_PERSISTENTE = DATA_DIR / NOME_ARQUIVO_SAIDA
+COLUNAS = ["arquivo", "diretorio", "fontes_relacionadas", "tamanho_bytes", "num_registros", "ultima_atualizacao"]
 
 
 def _descricao_por_pasta() -> dict[str, str]:
-    """Agrupa Fontes por pasta_bucket."""
     agrupado = defaultdict(list)
     for f in FONTES:
         agrupado[f.pasta_bucket].append(f.nome)
@@ -38,7 +37,6 @@ def _montar_s3_filesystem() -> pafs.S3FileSystem:
 
 
 def _contar_registros_parquet(s3_fs: pafs.S3FileSystem, bucket: str, key: str) -> int | None:
-    """Lê metadata do parquet (não baixa arquivo inteiro)."""
     try:
         caminho_s3 = f"{bucket}/{key}"
         pf = pq.ParquetFile(caminho_s3, filesystem=s3_fs)
@@ -67,11 +65,11 @@ def gerar_linhas(s3_client, s3_fs, bucket: str, descricoes: dict[str, str]) -> l
 
             linhas.append({
                 "arquivo": key,
-                "pasta": pasta,
+                "diretorio": pasta,
                 "fontes_relacionadas": descricoes.get(pasta, "(não mapeado no registro)"),
                 "tamanho_bytes": obj["Size"],
                 "num_registros": num_registros,
-                "data_modificacao": obj["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
+                "ultima_atualizacao": obj["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
             })
 
     linhas.sort(key=lambda r: r["arquivo"])
@@ -86,7 +84,6 @@ def main():
     print(f"Listando bucket {env.MINIO_BUCKET} e contando registros dos parquets...")
     linhas = gerar_linhas(s3_client, s3_fs, env.MINIO_BUCKET, descricoes)
 
-    # Salva localmente (persistente) e no bucket
     with open(CAMINHO_LOCAL_PERSISTENTE, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=COLUNAS)
         writer.writeheader()
@@ -94,7 +91,7 @@ def main():
 
     s3_client.upload_file(str(CAMINHO_LOCAL_PERSISTENTE), env.MINIO_BUCKET, NOME_ARQUIVO_SAIDA)
 
-    nao_mapeados = [l["pasta"] for l in linhas if l["fontes_relacionadas"] == "(não mapeado no registro)"]
+    nao_mapeados = [l["diretorio"] for l in linhas if l["fontes_relacionadas"] == "(não mapeado no registro)"]
     if nao_mapeados:
         print(f"[AVISO] Pasta(s) sem Fonte correspondente no registro: {sorted(set(nao_mapeados))}")
 
