@@ -1,4 +1,5 @@
 import os
+import re
 import socket
 import time
 import random
@@ -18,8 +19,7 @@ FTP_HOST = "ftp.datasus.gov.br"
 MAX_RETRIES = 10
 RETRY_DELAY = 5
 
-# SOCKS5 proxy (opcional) -- configure variáveis de ambiente e rode:
-#   ssh -R 1080 -N usuario@IP_VPS
+# SOCKS5 proxy (opcional) -- configure env e rode: ssh -R 1080 -N usuario@IP_VPS
 SOCKS5_PROXY_ENABLED = os.environ.get("SOCKS5_PROXY_ENABLED", "false").lower() in ("1", "true", "yes")
 SOCKS5_PROXY_HOST = os.environ.get("SOCKS5_PROXY_HOST", "127.0.0.1")
 SOCKS5_PROXY_PORT = int(os.environ.get("SOCKS5_PROXY_PORT", "1080"))
@@ -51,7 +51,9 @@ def get_tamanho_ftp(ftp: FTP, nome_arquivo: str) -> int | None:
         return None
 
 def _backoff(attempt: int):
-    """Backoff exponencial com jitter para evitar retries sincronizados."""
+    """Backoff exponencial com jitter, em vez de delay fixo -- evita que
+    retries fiquem sincronizados/martelando o servidor no mesmo instante
+    se houver throttling do lado do DATASUS."""
     espera = min(RETRY_DELAY * (2 ** attempt), 120) + random.uniform(0, 3)
     logger.info(f"Aguardando {espera:.1f}s antes de tentar de novo...")
     time.sleep(espera)
@@ -60,7 +62,7 @@ def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
                     manifesto: dict[str, int] | None = None) -> tuple[bool, bool]:
     """Retorna (sucesso, houve_novidade).
 
-    houve_novidade=False se arquivo já existe localmente ou está no manifesto.
+    houve_novidade=False se completo localmente ou no manifesto.
     manifesto evita re-baixar arquivos não modificados.
     """
     local_path = os.path.join(pasta_saida, nome_arquivo)
@@ -124,11 +126,22 @@ def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
                 return False, False
     return False, False
 
+def _chave_recencia(nome_arquivo: str) -> str:
+    """Extrai dígitos finais (competência) antes da extensão.
+
+    Evita ordenar por nome inteiro (UF domina alfabeto).
+    """
+    m = re.search(r"(\d+)\.\w+$", nome_arquivo, re.IGNORECASE)
+    return m.group(1) if m else nome_arquivo
+
+
 def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str], bool],
-                     pasta_bucket: str | None = None) -> tuple[bool, bool]:
+                     pasta_bucket: str | None = None, verificar_ultimas_n_competencias: int = 2) -> tuple[bool, bool]:
     """Retorna (sucesso, houve_novidade).
 
-    pasta_bucket: carrega manifesto uma vez para filtrar arquivos (opcional).
+    pasta_bucket: carrega manifesto para filtrar arquivos (opcional).
+    verificar_ultimas_n_competencias: otimização para histórico grande.
+    Agrupa por competência, valida apenas N recentes + novos.
     """
     ensure_output_dir(output_dir)
     logger.info(f"Conectando a {FTP_HOST} ({ftp_dir}) para listar arquivos...")
@@ -162,6 +175,27 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                 print("[FATAL] Não foi possível listar os arquivos do FTP.")
                 return False, False
             _backoff(attempt)
+
+    # Otimização: pula verificação pra competências antigas (agrupa por competência)
+    if manifesto is not None and relevantes:
+        competencias_distintas = sorted(set(_chave_recencia(arq) for arq in relevantes))
+        competencias_recentes = set(competencias_distintas[-verificar_ultimas_n_competencias:])
+
+        a_verificar = []
+        pulados_sem_rede = 0
+        for arq in relevantes:
+            competencia = _chave_recencia(arq)
+            if competencia in competencias_recentes or arq not in manifesto:
+                a_verificar.append(arq)
+            else:
+                pulados_sem_rede += 1
+
+        if pulados_sem_rede:
+            print(f"[OTIMIZAÇÃO] {pulados_sem_rede} arquivo(s) de competência(s) antiga(s) já "
+                  f"confirmado(s) no manifesto -- pulando verificação de rede (só as "
+                  f"{verificar_ultimas_n_competencias} competência(s) mais recentes, "
+                  f"todas as UFs, + arquivos novos são checados de fato).")
+        relevantes = a_verificar
 
     sucesso_geral = True
     houve_novidade = False
