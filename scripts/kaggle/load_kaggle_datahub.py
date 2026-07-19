@@ -9,6 +9,13 @@ from botocore.exceptions import ClientError
 from scripts.common.paths import BASE_DIR, PUBLISH_CACHE_DIR
 from scripts.common import env
 
+# Kaggle usa tempfile.mkdtemp() internamente (respeita TEMP/TMP, não .env)
+# Necessário pra evitar encher disco C: com zips grandes
+_temp_dir_kaggle = PUBLISH_CACHE_DIR.parent / "_temp_zip"
+_temp_dir_kaggle.mkdir(parents=True, exist_ok=True)
+os.environ['TEMP'] = str(_temp_dir_kaggle)
+os.environ['TMP'] = str(_temp_dir_kaggle)
+
 # ------------------- Kaggle -------------------
 KAGGLE_DIR = env.KAGGLE_DIR
 KAGGLE_JSON = env.KAGGLE_JSON
@@ -26,7 +33,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # -----------------------------
-# MinIO 
+# Configurações MinIO 
 # -----------------------------
 MINIO_ENDPOINT = env.MINIO_ENDPOINT
 if MINIO_ENDPOINT == "http://minio:9000":
@@ -40,7 +47,6 @@ DATASET_NAME = 'brazilian-kaggle-datahub'
 DATASET_TITLE = 'Brazilian Kaggle Datahub'
 FILES_TO_IGNORE = {'.gitkeep', 'raw_lake_metadados.csv'}
 
-# Cache persistente (definido em paths.py, customizável via .env)
 CACHE_DIR = PUBLISH_CACHE_DIR
 
 # ----------------------------
@@ -87,7 +93,8 @@ def load_lake_to_kaggle():
 
     logger.info(f"Cache persistente: {CACHE_DIR}")
 
-    # Baixa só novo/alterado, reaproveita cache quando possível
+    # Baixa só o que é novo ou mudou de tamanho desde a última
+    # publicação -- reaproveita o que já está no cache local
     baixados = 0
     reaproveitados = 0
     for s3_key, tamanho_remoto in objetos_s3.items():
@@ -103,26 +110,45 @@ def load_lake_to_kaggle():
 
     logger.info(f"✔ {baixados} arquivo(s) baixado(s), {reaproveitados} reaproveitado(s) do cache local.")
 
-    # Remove arquivos órfãos (não existem mais no bucket)
+    # Limpa do cache local qualquer arquivo que não existe mais no
+    # bucket (evita publicar dado obsoleto/removido na origem).
+    # Exclui os arquivos de controle nossos (não vêm do bucket, não
+    # devem nunca ser tratados como órfãos).
+    ARQUIVOS_DE_CONTROLE = {"dataset-metadata.json", ".ultima_publicacao_sucesso"}
     chaves_esperadas = set(objetos_s3.keys())
     removidos = 0
     for caminho_local in CACHE_DIR.rglob("*"):
         if caminho_local.is_file():
             chave_relativa = str(caminho_local.relative_to(CACHE_DIR)).replace(os.sep, "/")
-            if chave_relativa != "dataset-metadata.json" and chave_relativa not in chaves_esperadas:
+            if chave_relativa not in ARQUIVOS_DE_CONTROLE and chave_relativa not in chaves_esperadas:
                 caminho_local.unlink()
                 removidos += 1
     if removidos:
         logger.info(f"✔ {removidos} arquivo(s) órfão(s) removido(s) do cache (não existem mais no bucket).")
 
-    # Pula se sem mudanças desde última publicação
-    if baixados == 0 and removidos == 0:
+    # Arquivo marcador confirma que última publicação terminou (protege contra retry de falhas)
+    marcador_sucesso = CACHE_DIR / ".ultima_publicacao_sucesso"
+
+    # Invalida marcador se cache mudou (novo/removido) nessa execução
+    if (baixados > 0 or removidos > 0) and marcador_sucesso.exists():
+        marcador_sucesso.unlink()
+
+    ultima_publicacao_ok = marcador_sucesso.exists()
+
+    if baixados == 0 and removidos == 0 and ultima_publicacao_ok:
         logger.info("Nenhuma novidade real desde a última publicação -- pulando o envio ao Kaggle.")
         return
+    elif baixados == 0 and removidos == 0 and not ultima_publicacao_ok:
+        logger.info("Cache já está atualizado, mas a última tentativa de publicação não terminou "
+                     "com sucesso (sem marcador) -- publicando mesmo assim, pra garantir.")
 
     metadata_path = CACHE_DIR / "dataset-metadata.json"
 
-    # Verifica se existe; preserva tags/descrição configuradas manualmente
+    # Checa se o dataset já existe ANTES de decidir o metadata --
+    # se existir, tenta preservar tags/subtítulo/descrição já
+    # configurados manualmente no Kaggle, em vez de sobrescrever
+    # com um metadata mínimo do zero (bug identificado: isso
+    # apagava configurações manuais a cada publicação).
     try:
         api.dataset_list_files(dataset_id)
         dataset_exists = True
@@ -153,7 +179,7 @@ def load_lake_to_kaggle():
 
             metadata["id"] = dataset_id  # garante que está certo, independente do que veio
             metadata["resources"] = []  # API redetecta arquivos do cache
-                                        
+
             logger.info("✔ Metadados existentes preservados com sucesso.")
         except Exception as e:
             logger.warning(f"Não consegui baixar metadados existentes ({e}) -- "
@@ -174,7 +200,7 @@ def load_lake_to_kaggle():
         m.flush()
         os.fsync(m.fileno())
 
-    # Validação: garante metadata válido
+    # Validação: garante metadata válido (erro mais claro que o do Kaggle)
     with open(metadata_path, "r") as m:
         conteudo_verificado = json.load(m)
     if not isinstance(conteudo_verificado, dict):
@@ -204,6 +230,9 @@ def load_lake_to_kaggle():
                 dir_mode='zip'
             )
             logger.info(f"✔ Dataset {dataset_id} criado com sucesso!")
+
+        # Marcador só escrito se publicação terminou (retry automático em falhas)
+        marcador_sucesso.write_text(datetime.now().isoformat())
 
     except Exception as e:
         logger.error(f"❌ Erro na API do Kaggle: {e}")
