@@ -51,9 +51,7 @@ def get_tamanho_ftp(ftp: FTP, nome_arquivo: str) -> int | None:
         return None
 
 def _backoff(attempt: int):
-    """Backoff exponencial com jitter, em vez de delay fixo -- evita que
-    retries fiquem sincronizados/martelando o servidor no mesmo instante
-    se houver throttling do lado do DATASUS."""
+    """Backoff exponencial com jitter, evita retries sincronizados."""
     espera = min(RETRY_DELAY * (2 ** attempt), 120) + random.uniform(0, 3)
     logger.info(f"Aguardando {espera:.1f}s antes de tentar de novo...")
     time.sleep(espera)
@@ -87,7 +85,7 @@ def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
                         continue
                     return False, False
 
-                if manifesto is not None and manifesto.get(nome_arquivo) == tamanho_ftp:
+                if manifesto is not None and manifesto.get(nome_arquivo.upper()) == tamanho_ftp:
                     print(f"[SKIP-MANIFESTO] {nome_arquivo} já incorporado ao último output publicado.")
                     return True, False
 
@@ -135,6 +133,19 @@ def _chave_recencia(nome_arquivo: str) -> str:
     return m.group(1) if m else nome_arquivo
 
 
+def _deduplicar_case(nomes: list[str]) -> list[str]:
+    """Remove duplicatas por maiúscula/minúscula (ex: X.DBC e X.dbc), mantendo a primeira ocorrência."""
+    vistos = set()
+    resultado = []
+    for nome in nomes:
+        chave = nome.upper()
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        resultado.append(nome)
+    return resultado
+
+
 def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str], bool],
                      pasta_bucket: str | None = None, verificar_ultimas_n_competencias: int = 2) -> tuple[bool, bool]:
     """Retorna (sucesso, houve_novidade).
@@ -148,6 +159,8 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
     relevantes = []
 
     manifesto = carregar_manifesto(pasta_bucket) if pasta_bucket else None
+    if manifesto is not None:
+        manifesto = {k.upper(): v for k, v in manifesto.items()}
 
     for attempt in range(MAX_RETRIES):
         try:
@@ -165,7 +178,12 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                     print("Nenhum arquivo encontrado no diretório.")
                     return True, False  # diretório vazio não é erro, só não tem novidade
 
-                relevantes = [arq for arq in arquivos if regra_filtro(arq)]
+                relevantes_brutos = [arq for arq in arquivos if regra_filtro(arq)]
+                relevantes = _deduplicar_case(relevantes_brutos)
+                duplicatas = len(relevantes_brutos) - len(relevantes)
+                if duplicatas:
+                    print(f"[AVISO] {duplicatas} duplicata(s) por maiúscula/minúscula removida(s).")
+
                 print(f"Sucesso ao listar! {len(relevantes)} arquivos passaram no filtro.")
                 break
 
@@ -185,7 +203,7 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
         pulados_sem_rede = 0
         for arq in relevantes:
             competencia = _chave_recencia(arq)
-            if competencia in competencias_recentes or arq not in manifesto:
+            if competencia in competencias_recentes or arq.upper() not in manifesto:
                 a_verificar.append(arq)
             else:
                 pulados_sem_rede += 1

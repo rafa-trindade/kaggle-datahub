@@ -10,6 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from scripts.common.paths import BASE_DIR
+from scripts.common import simpledbf_patch  # corrige bug de data zerada (00000000) na lib
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,10 +18,25 @@ logger = logging.getLogger(__name__)
 # Temp dir DuckDB (configurável via env, fallback no projeto)
 DUCKDB_TEMP_DIR = Path(os.environ.get("DUCKDB_TEMP_DIR", str(BASE_DIR / "data" / ".duckdb_temp")))
 
+
+def listar_dbc_deduplicados(dbc_dir: Path) -> list[str]:
+    """Lista .dbc do diretório, removendo duplicatas por maiúscula/minúscula (ex: X.DBC e X.dbc)."""
+    vistos = set()
+    arquivos = []
+    for f in sorted(os.listdir(dbc_dir)):
+        if not f.lower().endswith(".dbc"):
+            continue
+        chave = f.upper()
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        arquivos.append(f)
+    return arquivos
+
+
 def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     """Converte .dbc para Parquet consolidado. Retorna True se sucesso."""
-    arquivos_dbc = [f for f in os.listdir(dbc_dir) if f.lower().endswith(".dbc")]
-    arquivos_dbc.sort()
+    arquivos_dbc = listar_dbc_deduplicados(dbc_dir)
 
     if not arquivos_dbc:
         logger.warning(f"Nenhum arquivo .dbc encontrado em {dbc_dir}.")
@@ -103,7 +119,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     query = f"""
         COPY (
             SELECT * FROM read_parquet('{padrao_leitura}', union_by_name=True)
-        ) TO '{str(parquet_final_path)}' (FORMAT PARQUET, ROW_GROUP_SIZE 1000000);
+        ) TO '{str(parquet_final_path)}' (FORMAT PARQUET, ROW_GROUP_SIZE 250000);
     """
 
     DUCKDB_TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -144,7 +160,7 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
 
     s3_key = f"{pasta_bucket}/{nome_arquivo_final}"
 
-    arquivos_dbc = [f for f in os.listdir(dbc_dir) if f.lower().endswith(".dbc")]
+    arquivos_dbc = listar_dbc_deduplicados(dbc_dir)
     if not arquivos_dbc:
         logger.info(f"Nenhum .dbc novo/alterado em {dbc_dir} -- nada a processar.")
         return False
@@ -183,12 +199,12 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
                     WHERE _ARQUIVO_ORIGEM NOT IN ({lista_nomes})
                     UNION ALL BY NAME
                     SELECT * FROM read_parquet('{parquet_novos_temp}')
-                ) TO '{caminho_final_temp}' (FORMAT PARQUET, ROW_GROUP_SIZE 1000000);
+                ) TO '{caminho_final_temp}' (FORMAT PARQUET, ROW_GROUP_SIZE 250000);
             """
         else:
             query = f"""
                 COPY (SELECT * FROM read_parquet('{parquet_novos_temp}'))
-                TO '{caminho_final_temp}' (FORMAT PARQUET, ROW_GROUP_SIZE 1000000);
+                TO '{caminho_final_temp}' (FORMAT PARQUET, ROW_GROUP_SIZE 250000);
             """
         con.execute(query)
         contagem = con.execute(f"SELECT COUNT(*) FROM read_parquet('{caminho_final_temp}')").fetchone()[0]
@@ -217,8 +233,7 @@ def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqui
 
     arquivos_presentes = {
         f: (dbc_dir / f).stat().st_size
-        for f in os.listdir(dbc_dir)
-        if f.lower().endswith(".dbc")
+        for f in listar_dbc_deduplicados(dbc_dir)
     }
 
     if not arquivos_presentes:
@@ -230,7 +245,8 @@ def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqui
         return exit_codes.ERRO
 
     manifesto = carregar_manifesto(pasta_bucket)
-    manifesto.update(arquivos_presentes)
+    manifesto = {k.upper(): v for k, v in manifesto.items()}
+    manifesto.update({k.upper(): v for k, v in arquivos_presentes.items()})
     salvar_manifesto(pasta_bucket, manifesto)
 
     return exit_codes.SUCESSO
@@ -252,8 +268,7 @@ def processar_fonte_ftp_substituicao_completa(dbc_dir: Path, pasta_bucket: str, 
 
     arquivos_presentes = {
         f: (dbc_dir / f).stat().st_size
-        for f in os.listdir(dbc_dir)
-        if f.lower().endswith(".dbc")
+        for f in listar_dbc_deduplicados(dbc_dir)
     }
 
     if not arquivos_presentes:
@@ -270,8 +285,8 @@ def processar_fonte_ftp_substituicao_completa(dbc_dir: Path, pasta_bucket: str, 
         return exit_codes.ERRO
 
     manifesto = carregar_manifesto(pasta_bucket)
-    manifesto = {k: v for k, v in manifesto.items() if not k.upper().startswith(chave_manifesto_prefixo.upper())}
-    manifesto.update(arquivos_presentes)
+    manifesto = {k.upper(): v for k, v in manifesto.items() if not k.upper().startswith(chave_manifesto_prefixo.upper())}
+    manifesto.update({k.upper(): v for k, v in arquivos_presentes.items()})
     salvar_manifesto(pasta_bucket, manifesto)
 
     return exit_codes.SUCESSO
