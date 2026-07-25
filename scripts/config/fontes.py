@@ -230,7 +230,7 @@ FONTES: list[Fonte] = [
     Fonte(
         id="sinan",
         nome="SINAN - Doenças e Agravos de Notificação Compulsória",
-        descricao="58 agravos (dengue, tuberculose, violência interpessoal, sífilis, AIDS/HIV, hanseníase e outros) -- cada um publicado como parquet separado em sinan/. Lista completa em scripts/config/agravos_sinan.py.",
+        descricao="58 agravos (dengue, tuberculose, violência interpessoal, sífilis, AIDS/HIV, hanseníase e outros)",
         tipo="pipeline",
         pasta_bucket="sinan",
         extract_modules=["scripts.extract.datasus.fetch_sinan"],
