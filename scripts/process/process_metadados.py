@@ -15,9 +15,9 @@ from scripts.config.fontes import FONTES
 NOME_ARQUIVO_SAIDA = "datahub-metadados.csv"
 CAMINHO_LOCAL_PERSISTENTE = DATA_DIR / NOME_ARQUIVO_SAIDA
 
-COLUNAS = ["arquivo", "diretorio", "descricao", "tamanho_bytes", "num_registros", "ultima_atualizacao"]
+COLUNAS = ["arquivo", "diretorio", "nome_fonte", "descricao", "tamanho_bytes", "num_registros", "ultima_atualizacao"]
 
-DESCRICOES_POR_ID = {f.id: f.descricao for f in FONTES}
+FONTE_POR_ID = {f.id: f for f in FONTES}
 
 MAPEAMENTO_ARQUIVO_ID = {
     # CNES
@@ -27,7 +27,7 @@ MAPEAMENTO_ARQUIVO_ID = {
     "profissionais": "cnes_profissionais",
     "equipamentos": "cnes_equipamentos",
     
-    # SIM
+    # SIM 
     "causas_externas_cid10": "sim_causas_externas_cid10",
     "causas_externas_cid9": "sim_causas_externas_cid9",
     "fetais_cid10": "sim_dofet_cid10",
@@ -56,17 +56,21 @@ MAPEAMENTO_ARQUIVO_ID = {
     "pns_2019": "pns_2019",
 }
 
-def _obter_descricao_exata(pasta: str, nome_arquivo: str) -> str:
-    """Acha a descrição da fonte cruzando o nome do arquivo com o ID da fonte."""
+def _obter_metadados_fonte(pasta: str, nome_arquivo: str) -> tuple[str, str]:
+    """Acha o nome e a descrição da fonte cruzando o nome do arquivo com o ID."""
     
     for trecho, fonte_id in MAPEAMENTO_ARQUIVO_ID.items():
         if trecho in nome_arquivo:
-            return DESCRICOES_POR_ID.get(fonte_id, "(descrição ausente no registro)")
+            fonte = FONTE_POR_ID.get(fonte_id)
+            if fonte:
+                return fonte.nome, fonte.descricao
             
     if pasta == "sinan":
-        return DESCRICOES_POR_ID.get("sinan", "(descrição do sinan ausente)")
+        fonte_sinan = FONTE_POR_ID.get("sinan")
+        if fonte_sinan:
+            return fonte_sinan.nome, fonte_sinan.descricao
         
-    return "(não mapeado no registro)"
+    return "(não mapeado no registro)", "(não mapeado no registro)"
 
 
 def _montar_s3_filesystem() -> pafs.S3FileSystem:
@@ -108,10 +112,13 @@ def gerar_linhas(s3_client, s3_fs, bucket: str) -> list[dict]:
             if key.endswith(".parquet"):
                 num_registros = _contar_registros_parquet(s3_fs, bucket, key)
 
+            nome, descricao = _obter_metadados_fonte(pasta, nome_arquivo)
+
             linhas.append({
                 "arquivo": key,
                 "diretorio": pasta,
-                "descricao": _obter_descricao_exata(pasta, nome_arquivo),  # A mágica do ID acontece aqui
+                "nome_fonte": nome,
+                "descricao": descricao,
                 "tamanho_bytes": obj["Size"],
                 "num_registros": num_registros,
                 "ultima_atualizacao": obj["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
@@ -135,7 +142,7 @@ def main():
 
     s3_client.upload_file(str(CAMINHO_LOCAL_PERSISTENTE), env.MINIO_BUCKET, NOME_ARQUIVO_SAIDA)
 
-    nao_mapeados = [l["diretorio"] for l in linhas if l["descricao"].startswith("(não mapeado")]
+    nao_mapeados = [l["diretorio"] for l in linhas if l["nome_fonte"].startswith("(não mapeado")]
     if nao_mapeados:
         print(f"[AVISO] Pasta(s) sem Fonte correspondente no registro: {sorted(set(nao_mapeados))}")
 
