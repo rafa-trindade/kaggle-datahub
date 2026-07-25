@@ -15,14 +15,23 @@ from scripts.config.fontes import FONTES
 
 NOME_ARQUIVO_SAIDA = "datahub-metadados.csv"
 CAMINHO_LOCAL_PERSISTENTE = DATA_DIR / NOME_ARQUIVO_SAIDA
-COLUNAS = ["arquivo", "diretorio", "fontes_relacionadas", "tamanho_bytes", "num_registros", "ultima_atualizacao"]
+COLUNAS = ["arquivo", "diretorio", "fontes_relacionadas", "descricao", "tamanho_bytes", "num_registros", "ultima_atualizacao"]
 
 
-def _descricao_por_pasta() -> dict[str, str]:
-    agrupado = defaultdict(list)
+def _descricao_por_pasta() -> dict[str, dict[str, str]]:
+    nomes = defaultdict(list)
+    descricoes = defaultdict(list)
     for f in FONTES:
-        agrupado[f.pasta_bucket].append(f.nome)
-    return {pasta: " | ".join(nomes) for pasta, nomes in agrupado.items()}
+        nomes[f.pasta_bucket].append(f.nome)
+        descricoes[f.pasta_bucket].append(f.descricao)
+        
+    return {
+        pasta: {
+            "nomes": " | ".join(nomes[pasta]),
+            "descricoes": " | ".join(descricoes[pasta])
+        } 
+        for pasta in nomes.keys()
+    }
 
 
 def _montar_s3_filesystem() -> pafs.S3FileSystem:
@@ -46,7 +55,7 @@ def _contar_registros_parquet(s3_fs: pafs.S3FileSystem, bucket: str, key: str) -
         return None
 
 
-def gerar_linhas(s3_client, s3_fs, bucket: str, descricoes: dict[str, str]) -> list[dict]:
+def gerar_linhas(s3_client, s3_fs, bucket: str, infos_pasta: dict[str, dict[str, str]]) -> list[dict]:
     paginator = s3_client.get_paginator("list_objects_v2")
     linhas = []
 
@@ -63,10 +72,14 @@ def gerar_linhas(s3_client, s3_fs, bucket: str, descricoes: dict[str, str]) -> l
             if key.endswith(".parquet"):
                 num_registros = _contar_registros_parquet(s3_fs, bucket, key)
 
+            # Resgata os dados da pasta (nomes e descricoes)
+            info = infos_pasta.get(pasta, {"nomes": "(não mapeado no registro)", "descricoes": ""})
+
             linhas.append({
                 "arquivo": key,
                 "diretorio": pasta,
-                "fontes_relacionadas": descricoes.get(pasta, "(não mapeado no registro)"),
+                "fontes_relacionadas": info["nomes"],
+                "descricao": info["descricoes"],       
                 "tamanho_bytes": obj["Size"],
                 "num_registros": num_registros,
                 "ultima_atualizacao": obj["LastModified"].strftime("%Y-%m-%d %H:%M:%S"),
@@ -91,7 +104,7 @@ def main():
 
     s3_client.upload_file(str(CAMINHO_LOCAL_PERSISTENTE), env.MINIO_BUCKET, NOME_ARQUIVO_SAIDA)
 
-    nao_mapeados = [l["diretorio"] for l in linhas if l["fontes_relacionadas"] == "(não mapeado no registro)"]
+    nao_mapeados = [l["diretorio"] for l in linhas if l["fontes_relacionadas"].startswith("(não mapeado")]
     if nao_mapeados:
         print(f"[AVISO] Pasta(s) sem Fonte correspondente no registro: {sorted(set(nao_mapeados))}")
 
