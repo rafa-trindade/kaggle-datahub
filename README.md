@@ -102,7 +102,7 @@ O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produçã
 
 **Bases disponibilizadas:**
 
-- `producao_ambulatorial.parquet` - Produção ambulatorial (BPA), Jul/1994-atual. &nbsp;`🚧`
+- `producao_ambulatorial/` - Produção ambulatorial (BPA), Jul/1994-atual. **Particionada por competência** (ver nota abaixo). &nbsp;`🚧`
 - `apac_medicamentos.parquet` - APAC de medicamentos, Jan/2008-atual. &nbsp;`🚧`
 - `apac_quimioterapia.parquet` - APAC de quimioterapia, Jan/2008-atual. &nbsp;`🚧`
 - `apac_radioterapia.parquet` - APAC de radioterapia, Jan/2008-atual. &nbsp;`🚧`
@@ -114,6 +114,14 @@ O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produçã
 - `apac_confeccao_fistula.parquet` - APAC de confecção de fístula arteriovenosa, Jun/2014-atual. &nbsp;`🚧`
 - `apac_cirurgia_bariatrica.parquet` - APAC de acompanhamento a cirurgia bariátrica, Jan/2008 a Mar/2013. &nbsp;`🚧`
 - `apac_pos_cirurgia_bariatrica.parquet` - APAC de acompanhamento pós cirurgia bariátrica, Abr/2013-atual. &nbsp;`🚧`
+
+#### Nota sobre a Produção Ambulatorial (PA) &nbsp;`🚧 EM DESENVOLVIMENTO`
+
+A PA é, de longe, a maior base do DATASUS: mais de 10 mil arquivos `.dbc` e dezenas de GB, com série desde Jul/1994. Por isso ela recebe um tratamento distinto das demais fontes, que viram um único parquet consolidado:
+
+- **Particionamento por competência.** Em vez de um único `producao_ambulatorial.parquet`, a PA é publicada como uma pasta `producao_ambulatorial/` contendo um parquet por competência mensal, nomeado `producao_ambulatorial_AAAAMM.parquet` (ex.: `producao_ambulatorial_202604.parquet`). O ano de 4 dígitos faz a ordenação alfabética coincidir com a cronológica. Competências grandes que o DATASUS fatia em partes (ex.: `PASP2401a/b.dbc`) são unificadas no parquet daquela competência.
+- **Dataset Kaggle dedicado.** Pelo volume (que sozinho se aproxima do teto de 200 GB do Kaggle) e pelo modelo de publicação do dataset principal, a PA é publicada num **dataset Kaggle separado** (`sia-producao-ambulatorial`), vinculado ao principal por descrição. Isso isola o custo de reenvio e protege a estabilidade do dataset principal.
+
 
 > BRASIL. Ministério da Saúde. DATASUS. *Sistema de Informações Ambulatoriais do SUS (SIA/SUS)*. Brasília, DF: Ministério da Saúde. Disponível em: <https://datasus.saude.gov.br/acesso-a-informacao/producao-ambulatorial-sia-sus/>.
 
@@ -248,7 +256,6 @@ sih/
   servicos_profissionais.parquet
 
 sia/                                    # 🚧 EM DESENVOLVIMENTO
-  producao_ambulatorial.parquet
   apac_medicamentos.parquet
   apac_quimioterapia.parquet
   apac_radioterapia.parquet
@@ -260,6 +267,13 @@ sia/                                    # 🚧 EM DESENVOLVIMENTO
   apac_confeccao_fistula.parquet
   apac_cirurgia_bariatrica.parquet
   apac_pos_cirurgia_bariatrica.parquet
+
+producao_ambulatorial/                  # 🚧 PA -- particionada, dataset Kaggle dedicado
+  producao_ambulatorial_199407.parquet
+  producao_ambulatorial_199408.parquet
+  ...
+  producao_ambulatorial_202604.parquet
+  _manifest.json
 
 ciha/                                   # 🚧 EM DESENVOLVIMENTO
   comunicacao_internacao_hospitalar_ambulatorial.parquet
@@ -320,6 +334,13 @@ python -m scripts.process.process_metadados
 ```bash
 python -m scripts.kaggle.load_kaggle_datahub
 ```
+
+O comando publica em **dois datasets Kaggle** (mesmo usuário), roteando por prefixo do bucket:
+
+- **Principal** (`brazilian-kaggle-datahub`): todas as fontes, exceto a Produção Ambulatorial.
+- **PA dedicado** (`sia-producao-ambulatorial`): apenas os objetos sob `producao_ambulatorial/`. &nbsp;`🚧 EM DESENVOLVIMENTO`
+
+Cada dataset tem seu próprio cache local e sobe somente os seus arquivos. As descrições são mantidas manualmente no Kaggle - o script preserva a descrição existente e só semeia uma mínima (com link cruzado entre os dois datasets) na primeira publicação de cada um.
 
 ---
 
