@@ -92,7 +92,50 @@ O **Sistema de Informações Hospitalares (SIH/SUS)** registra todas as interna�
 
 ---
 
-### **5. Doenças de Notificação Compulsória (Fonte: SINAN - DATASUS)**
+### **5. Produção Ambulatorial (Fonte: SIA/SUS - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
+
+> 🚧 **Esta fonte está em desenvolvimento.** As bases abaixo estão sendo integradas ao pipeline uma a uma. Cada linha traz sua própria tag `🚧` - remova a tag da linha correspondente conforme cada base for finalizada e validada, e remova a tag do título desta seção quando todas estiverem prontas.
+
+O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produção ambulatorial do SUS - de procedimentos de baixa complexidade (BPA) às autorizações de procedimentos de alta complexidade (APAC): quimioterapia, radioterapia, diálise, medicamentos especializados, entre outros.
+
+**Escopo e Processamento:** Baixados via FTP público do DATASUS os arquivos `.dbc` de cada subsistema (um por UF/mês), diferenciados pelo prefixo do nome do arquivo, convertidos para Parquet e mesclados incrementalmente - mesma mecânica do SIM/SIH. A série moderna vive em `SIASUS/200801_/Dados`; a Produção Ambulatorial (PA), por começar em Jul/1994, também é varrida na pasta legada `SIASUS/199407_200712/Dados`. Alguns prefixos são prefixo um do outro (ex.: `AB` vs `ABO`), então o filtro valida o comprimento exato de `{UF}{AAMM}` para não haver captura cruzada.
+
+**Bases disponibilizadas:**
+
+- `producao_ambulatorial.parquet` - Produção ambulatorial (BPA), Jul/1994-atual. &nbsp;`🚧`
+- `apac_medicamentos.parquet` - APAC de medicamentos, Jan/2008-atual. &nbsp;`🚧`
+- `apac_quimioterapia.parquet` - APAC de quimioterapia, Jan/2008-atual. &nbsp;`🚧`
+- `apac_radioterapia.parquet` - APAC de radioterapia, Jan/2008-atual. &nbsp;`🚧`
+- `apac_tratamento_dialitico.parquet` - APAC de tratamento dialítico, Jun/2014-atual. &nbsp;`🚧`
+- `apac_nefrologia.parquet` - APAC de nefrologia, Jan/2008 a Out/2014 (substituída pela ATD). &nbsp;`🚧`
+- `apac_laudos_diversos.parquet` - APAC de laudos diversos, Jan/2008-atual. &nbsp;`🚧`
+- `psicossocial.parquet` - RAAS Psicossocial (CAPS), Jan/2013-atual. &nbsp;`🚧`
+- `atencao_domiciliar.parquet` - RAAS de Atenção Domiciliar (SAD), Nov/2012-atual. &nbsp;`🚧`
+- `apac_confeccao_fistula.parquet` - APAC de confecção de fístula arteriovenosa, Jun/2014-atual. &nbsp;`🚧`
+- `apac_cirurgia_bariatrica.parquet` - APAC de acompanhamento a cirurgia bariátrica, Jan/2008 a Mar/2013. &nbsp;`🚧`
+- `apac_pos_cirurgia_bariatrica.parquet` - APAC de acompanhamento pós cirurgia bariátrica, Abr/2013-atual. &nbsp;`🚧`
+
+> BRASIL. Ministério da Saúde. DATASUS. *Sistema de Informações Ambulatoriais do SUS (SIA/SUS)*. Brasília, DF: Ministério da Saúde. Disponível em: <https://datasus.saude.gov.br/acesso-a-informacao/producao-ambulatorial-sia-sus/>.
+
+---
+
+### **6. Comunicação Hospitalar e Ambulatorial (Fonte: CIHA - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
+
+> 🚧 **Esta fonte está em desenvolvimento.** Remova esta tag e a tag do título quando a base for finalizada e validada.
+
+O **Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)** registra internações e atendimentos ambulatoriais comunicados ao SUS, incluindo a produção **não-SUS** (particular e planos de saúde) - o que o torna complementar ao SIH/SIA, restritos à produção paga pelo SUS. Sucede o antigo CIH (2008-2010).
+
+**Escopo e Processamento:** Baixado via FTP público do DATASUS (`CIHA/201101_/Dados`, arquivos `CIHA{UF}{AAMM}.dbc`, um por UF/mês), convertido para Parquet e mesclado incrementalmente - mesma mecânica do SIM/SIH. Série acumulativa a partir de Jan/2011.
+
+**Base disponibilizada:**
+
+- `comunicacao_internacao_hospitalar_ambulatorial.parquet` - Internações e atendimentos comunicados (inclui não-SUS), Jan/2011-atual. &nbsp;`🚧`
+
+> BRASIL. Ministério da Saúde. DATASUS. *Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)*. Brasília, DF: Ministério da Saúde. Disponível em: <http://ciha.datasus.gov.br/CIHA/index.php>.
+
+---
+
+### **7. Doenças de Notificação Compulsória (Fonte: SINAN - DATASUS)**
 
 O **Sistema de Informação de Agravos de Notificação (SINAN)** registra todas as doenças e agravos de notificação obrigatória no Brasil - de arboviroses a doenças ocupacionais, de violência interpessoal a doenças quase erradicadas mantidas sob vigilância ativa.
 
@@ -104,7 +147,7 @@ O **Sistema de Informação de Agravos de Notificação (SINAN)** registra todas
 
 ---
 
-### **6. Demografia e Economia Municipal (Fonte: IBGE, via API SIDRA)**
+### **8. Demografia e Economia Municipal (Fonte: IBGE, via API SIDRA)**
 
 O **IBGE**, via sua API pública SIDRA, disponibiliza séries anuais de população estimada e produto interno bruto por município.
 
@@ -119,7 +162,7 @@ O **IBGE**, via sua API pública SIDRA, disponibiliza séries anuais de populaç
 
 ---
 
-### **7. Microdados Completos da PNS (Fonte: IBGE)**
+### **9. Microdados Completos da PNS (Fonte: IBGE)**
 
 A **Pesquisa Nacional de Saúde (PNS)** é um inquérito domiciliar do IBGE com mais de 1.000 variáveis por edição, cobrindo desde diagnósticos autorreferidos até hábitos de vida e acesso a serviços de saúde.
 
@@ -135,7 +178,7 @@ A **Pesquisa Nacional de Saúde (PNS)** é um inquérito domiciliar do IBGE com 
 
 ---
 
-### **8. Base Auxiliar (Macrorregião de Saúde)**
+### **10. Base Auxiliar (Macrorregião de Saúde)**
 
 Para permitir cruzamentos geográficos entre as demais bases, o projeto conta com uma base auxiliar de referência, construída a partir de dados abertos do Ministério da Saúde.
 
@@ -153,6 +196,8 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 - **SINASC (nascimentos):** 1994-atual.
 - **CNES (rede assistencial):** retrato da competência mais recente disponível (não histórico).
 - **SIH/SUS (internações):** 2008-atual (série moderna).
+- **SIA/SUS (produção ambulatorial):** varia por subsistema - PA desde Jul/1994, APACs em geral desde Jan/2008; ver a seção da fonte para o intervalo de cada base. &nbsp;`🚧 EM DESENVOLVIMENTO`
+- **CIHA (comunicação hosp./ambulatorial):** 2011-atual. &nbsp;`🚧 EM DESENVOLVIMENTO`
 - **SINAN (agravos):** varia por agravo, geralmente a partir dos anos 2000; consultar `agravos_sinan.py` para o início exato de cada um.
 - **IBGE (população/PIB):** população desde 2001, PIB desde 2002.
 - **PNS/IBGE:** edições pontuais de 2013 e 2019.
@@ -162,6 +207,7 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 ## 🔄 Atualização e Confiabilidade
 
 - **SIM, SINASC, CNES, SIH, SINAN:** sincronização totalmente automatizada via FTP, com detecção de novidade real (por tamanho de arquivo) antes de reprocessar ou publicar.
+- **SIA/SUS, CIHA:** sincronização automatizada via FTP, mesma mecânica das demais fontes DATASUS. &nbsp;`🚧 EM DESENVOLVIMENTO`
 - **IBGE (População/PIB):** sincronização automatizada via API, ano a ano, com descoberta dinâmica de quais anos a tabela realmente cobre.
 - **PNS/IBGE:** obtenção do microdado bruto é manual; a publicação (upload, sem transformação) é automatizada.
 - **Macrorregião de Saúde:** sincronização automatizada via HTTP.
@@ -200,6 +246,23 @@ sih/
   aih_reduzida.parquet
   aih_rejeitada.parquet
   servicos_profissionais.parquet
+
+sia/                                    # 🚧 EM DESENVOLVIMENTO
+  producao_ambulatorial.parquet
+  apac_medicamentos.parquet
+  apac_quimioterapia.parquet
+  apac_radioterapia.parquet
+  apac_tratamento_dialitico.parquet
+  apac_nefrologia.parquet
+  apac_laudos_diversos.parquet
+  psicossocial.parquet
+  atencao_domiciliar.parquet
+  apac_confeccao_fistula.parquet
+  apac_cirurgia_bariatrica.parquet
+  apac_pos_cirurgia_bariatrica.parquet
+
+ciha/                                   # 🚧 EM DESENVOLVIMENTO
+  comunicacao_internacao_hospitalar_ambulatorial.parquet
 
 sinan/
   dengue.parquet, tuberculose.parquet, hanseniase.parquet, ...
@@ -264,7 +327,7 @@ python -m scripts.kaggle.load_kaggle_datahub
 
 Este dataset consolidado é disponibilizado sob licença **CC0 1.0** (domínio público). Isso se refere ao trabalho de curadoria, padronização e harmonização realizado neste repositório - os dados originais permanecem de titularidade e responsabilidade das instituições abaixo, que devem ser citadas ao utilizar cada fonte individualmente:
 
-- **DATASUS (SIM, SINASC, CNES, SIH/SUS, SINAN):**
+- **DATASUS (SIM, SINASC, CNES, SIH/SUS, SIA/SUS, CIHA, SINAN):**
   > BRASIL. Ministério da Saúde. DATASUS. Brasília, DF: Ministério da Saúde. Disponível em: <https://datasus.saude.gov.br/>.
 
 - **IBGE (População, PIB, PNS):**
