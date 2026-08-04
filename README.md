@@ -1,6 +1,6 @@
 ![header](docs/images/datahub-banner.png)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-346B5D?labelColor=123C2F)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-346B5D?labelColor=123C2F)](LICENSE)
 [![Kaggle](https://img.shields.io/badge/Dataset-Kaggle-346B5D?labelColor=123C2F&logo=kaggle&logoColor=ffffff)](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub)
 [![GitHub Stars](https://img.shields.io/github/stars/rafa-trindade/kaggle-datahub?style=flat&labelColor=123C2F&color=346B5D)](https://github.com/rafa-trindade/kaggle-datahub)
 
@@ -19,6 +19,20 @@ O dataset final está disponível no [Kaggle](https://www.kaggle.com/datasets/ra
 ![arquitetura](docs/images/arquitetura.png)
 
 > Não existe uma pasta local persistida com o histórico completo de dados brutos. `data/landing/` é puramente um scratch space temporário - cada arquivo é baixado, processado e enviado direto ao bucket, com o local sendo apagado logo em seguida. A detecção de "isso já existe, não precisa reprocessar" é feita comparando contra um **manifesto** (`_manifest.json`) mantido no próprio bucket, não contra disco local.
+
+---
+
+## 💼 Aplicações Corporativas e Consultoria
+
+Embora este pipeline seja de código aberto para a comunidade, a estruturação e manutenção de Data Lakes na área da saúde exige governança, segurança e customização. O **DataHub Brasil** pode ser o motor de dados da sua instituição. 
+
+Casos de uso corporativos reais que podem ser construídos a partir desta arquitetura:
+* **Hospitais e Operadoras de Saúde:** Cruzamento de dados de mortalidade (SIM) e nascimentos (SINASC) com bases internas para modelos preditivos de risco e dimensionamento de rede assistencial.
+* **Healthtechs:** Alimentação automatizada de bancos de dados proprietários via pipelines customizados, utilizando os dados de infraestrutura do CNES e faturamento do SIA/SIH.
+* **Indústria Farmacêutica e Pesquisa:** Mapeamento geolocalizado de incidência de doenças de notificação compulsória (SINAN) para direcionamento de estudos clínicos, campanhas e distribuição de medicamentos.
+
+📩 **Quer implementar uma solução robusta de dados de saúde na sua empresa?** 
+[Fale comigo no LinkedIn](https://www.linkedin.com/in/rafatrindade/) para consultoria técnica especializada, implantação de arquitetura em nuvem e produtização de modelos de dados.
 
 ---
 
