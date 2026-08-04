@@ -94,7 +94,7 @@ O **Sistema de Informações Hospitalares (SIH/SUS)** registra todas as interna�
 
 ### **5. Produção Ambulatorial (Fonte: SIA/SUS - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
 
-> 🚧 **Esta fonte está em desenvolvimento.** As bases abaixo estão sendo integradas ao pipeline uma a uma. Cada linha traz sua própria tag `🚧` - remova a tag da linha correspondente conforme cada base for finalizada e validada, e remova a tag do título desta seção quando todas estiverem prontas.
+> 🚧 **Esta fonte está em desenvolvimento.**
 
 O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produção ambulatorial do SUS - de procedimentos de baixa complexidade (BPA) às autorizações de procedimentos de alta complexidade (APAC): quimioterapia, radioterapia, diálise, medicamentos especializados, entre outros.
 
@@ -129,7 +129,7 @@ A PA é, de longe, a maior base do DATASUS: mais de 10 mil arquivos `.dbc` e dez
 
 ### **6. Comunicação Hospitalar e Ambulatorial (Fonte: CIHA - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
 
-> 🚧 **Esta fonte está em desenvolvimento.** Remova esta tag e a tag do título quando a base for finalizada e validada.
+> 🚧 **Esta fonte está em desenvolvimento.**
 
 O **Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)** registra internações e atendimentos ambulatoriais comunicados ao SUS, incluindo a produção **não-SUS** (particular e planos de saúde) - o que o torna complementar ao SIH/SIA, restritos à produção paga pelo SUS. Sucede o antigo CIH (2008-2010).
 
