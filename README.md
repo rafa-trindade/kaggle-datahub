@@ -360,7 +360,12 @@ Cada dataset tem seu próprio cache local e sobe somente os seus arquivos. As de
 
 ## 📄 Licença e Créditos
 
-Este dataset consolidado é disponibilizado sob licença **CC0 1.0** (domínio público). Isso se refere ao trabalho de curadoria, padronização e harmonização realizado neste repositório - os dados originais permanecem de titularidade e responsabilidade das instituições abaixo, que devem ser citadas ao utilizar cada fonte individualmente:
+Este projeto opera sob um modelo duplo de licenciamento, separando a engenharia de software dos dados públicos:
+
+1. **Código-fonte e Arquitetura:** O pipeline de extração, os scripts de processamento e a infraestrutura como código deste repositório estão licenciados sob a **GNU GPLv3**. Você é livre para usar, estudar e modificar o código, desde que qualquer software derivado ou modificação também seja obrigatoriamente de código aberto sob a mesma licença.
+2. **Dataset Consolidado:** Os arquivos de dados gerados e publicados no Kaggle são disponibilizados sob licença **CC0 1.0** (domínio público), referindo-se estritamente ao trabalho de curadoria, padronização e harmonização.
+
+Os dados originais permanecem de titularidade e responsabilidade das instituições abaixo, que devem ser citadas ao utilizar cada fonte individualmente:
 
 - **DATASUS (SIM, SINASC, CNES, SIH/SUS, SIA/SUS, CIHA, SINAN):**
   > BRASIL. Ministério da Saúde. DATASUS. Brasília, DF: Ministério da Saúde. Disponível em: <https://datasus.saude.gov.br/>.
