@@ -194,6 +194,7 @@ def main():
     print("\nConcluído.")
 
 
+
 def listar():
     """Modo utilitário: só lista os arquivos do dataset configurado e sai.
     Rode com:  python baixar_dataset.py --listar
