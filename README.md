@@ -24,7 +24,7 @@ O [dataset final](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-
 
 ---
 
-## 💼 Aplicações Corporativas e Consultoria
+## 💼 Aplicações 
 
 Embora este pipeline seja de código aberto para a comunidade, a estruturação e manutenção de Data Lakes na área da saúde exige governança, segurança e customização. O **DataHub Brasil** pode ser o motor de dados da sua instituição. 
 
@@ -32,9 +32,6 @@ Casos de uso corporativos reais que podem ser construídos a partir desta arquit
 * **Hospitais e Operadoras de Saúde:** Cruzamento de dados de mortalidade (SIM) e nascimentos (SINASC) com bases internas para modelos preditivos de risco e dimensionamento de rede assistencial.
 * **Healthtechs:** Alimentação automatizada de bancos de dados proprietários via pipelines customizados, utilizando os dados de infraestrutura do CNES e faturamento do SIA/SIH.
 * **Indústria Farmacêutica e Pesquisa:** Mapeamento geolocalizado de incidência de doenças de notificação compulsória (SINAN) para direcionamento de estudos clínicos, campanhas e distribuição de medicamentos.
-
-📩 **Quer implementar uma solução robusta de dados de saúde na sua empresa?** 
-[Fale comigo no LinkedIn](https://www.linkedin.com/in/rafatrindade/) para consultoria técnica especializada, implantação de arquitetura em nuvem e produtização de modelos de dados.
 
 ---
 
