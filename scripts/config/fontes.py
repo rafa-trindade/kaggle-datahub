@@ -238,6 +238,132 @@ FONTES: list[Fonte] = [
     ),
 
     # ------------------------------------------------------------------
+    # SIA/SUS -- Sistema de Informações Ambulatoriais.
+    # ------------------------------------------------------------------
+    Fonte(
+        id="sia_pa",
+        nome="SIA/SUS - Produção Ambulatorial",
+        descricao="Produção ambulatorial do SUS (BPA) -- procedimentos, quantidades e valores por estabelecimento e competência. Maior base do DATASUS, série desde Jul/1994.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_pa"],
+        process_modules=["scripts.process.datasus.process_sia_pa"],
+    ),
+    Fonte(
+        id="sia_am",
+        nome="SIA/SUS - APAC de Medicamentos",
+        descricao="APACs de medicamentos (componente especializado da assistência farmacêutica), 2008-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_am"],
+        process_modules=["scripts.process.datasus.process_sia_am"],
+    ),
+    Fonte(
+        id="sia_aq",
+        nome="SIA/SUS - APAC de Quimioterapia",
+        descricao="APACs de quimioterapia oncológica, 2008-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_aq"],
+        process_modules=["scripts.process.datasus.process_sia_aq"],
+    ),
+    Fonte(
+        id="sia_ar",
+        nome="SIA/SUS - APAC de Radioterapia",
+        descricao="APACs de radioterapia oncológica, 2008-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_ar"],
+        process_modules=["scripts.process.datasus.process_sia_ar"],
+    ),
+    Fonte(
+        id="sia_atd",
+        nome="SIA/SUS - APAC de Tratamento Dialítico",
+        descricao="APACs de tratamento dialítico (diálise), Jun/2014-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_atd"],
+        process_modules=["scripts.process.datasus.process_sia_atd"],
+    ),
+    Fonte(
+        id="sia_an",
+        nome="SIA/SUS - APAC de Nefrologia",
+        descricao="APACs de nefrologia, 2008 a Out/2014 (substituída pela ATD).",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_an"],
+        process_modules=["scripts.process.datasus.process_sia_an"],
+    ),
+    Fonte(
+        id="sia_ad",
+        nome="SIA/SUS - APAC de Laudos Diversos",
+        descricao="APACs de laudos diversos, 2008-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_ad"],
+        process_modules=["scripts.process.datasus.process_sia_ad"],
+    ),
+    Fonte(
+        id="sia_ps",
+        nome="SIA/SUS - Psicossocial (RAAS)",
+        descricao="RAAS Psicossocial -- atendimentos da Rede de Atenção Psicossocial (CAPS), Jan/2013-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_ps"],
+        process_modules=["scripts.process.datasus.process_sia_ps"],
+    ),
+    Fonte(
+        id="sia_sad",
+        nome="SIA/SUS - Atenção Domiciliar (RAAS)",
+        descricao="RAAS de Atenção Domiciliar (SAD/Melhor em Casa), Nov/2012-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_sad"],
+        process_modules=["scripts.process.datasus.process_sia_sad"],
+    ),
+    Fonte(
+        id="sia_acf",
+        nome="SIA/SUS - APAC de Confecção de Fístula Arteriovenosa",
+        descricao="APACs de confecção de fístula arteriovenosa (acesso para diálise), Jun/2014-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_acf"],
+        process_modules=["scripts.process.datasus.process_sia_acf"],
+    ),
+    Fonte(
+        id="sia_ab",
+        nome="SIA/SUS - APAC de Cirurgia Bariátrica",
+        descricao="APACs de acompanhamento a cirurgia bariátrica, 2008 a Mar/2013 (substituída pela ABO).",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_ab"],
+        process_modules=["scripts.process.datasus.process_sia_ab"],
+    ),
+    Fonte(
+        id="sia_abo",
+        nome="SIA/SUS - APAC de Acompanhamento Pós Cirurgia Bariátrica",
+        descricao="APACs de acompanhamento pós cirurgia bariátrica, Abr/2013-atual.",
+        tipo="pipeline",
+        pasta_bucket="sia",
+        extract_modules=["scripts.extract.datasus.fetch_sia_abo"],
+        process_modules=["scripts.process.datasus.process_sia_abo"],
+    ),
+
+    # ------------------------------------------------------------------
+    # CIHA -- Comunicação de Informação Hospitalar e Ambulatorial
+    # (série acumulativa a partir de Jan/2011; sucede o antigo CIH)
+    # ------------------------------------------------------------------
+    Fonte(
+        id="ciha",
+        nome="CIHA - Comunicação de Informação Hospitalar e Ambulatorial",
+        descricao="Internações e atendimentos ambulatoriais comunicados ao SUS, incluindo produção não-SUS (particular, planos de saúde), 2011-atual. Sucede o antigo CIH.",
+        tipo="pipeline",
+        pasta_bucket="ciha",
+        extract_modules=["scripts.extract.datasus.fetch_ciha"],
+        process_modules=["scripts.process.datasus.process_ciha"],
+    ),
+
+    # ------------------------------------------------------------------
     # Geo / Macrorregião
     # ------------------------------------------------------------------
     Fonte(

@@ -10,6 +10,8 @@ Este é um hub bruto e geral de dados públicos do Brasil: mortalidade, nascimen
 
 O dataset final está disponível no [Kaggle](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub), com um [notebook de exemplo](https://www.kaggle.com/code/rafatrindade/taxa-de-incid-ncia-de-doen-as-por-munic-pio) demonstrando como cruzar as bases (doenças de notificação compulsória e população, por município) para calcular taxa de incidência por 100 mil habitantes. Cobre diferentes dimensões da saúde pública e demografia do Brasil: desde onde a rede está habilitada a atender e quantos leitos ela tem, até quem nasce, quem morre, quais doenças são notificadas, e como a população e a economia de cada município evoluem ao longo do tempo. 
 
+ A Produção Ambulatorial (SIA-PA), pelo seu volume, é publicada em um [dataset dedicado no Kaggle](https://www.kaggle.com/datasets/rafatrindade/sia-producao-ambulatorial), particionado por competência mensal.
+
 📄 [Documentação técnica oficial](https://github.com/rafa-trindade/kaggle-datahub/releases/download/docs-v1/documentacao.rar) do DATASUS/IBGE (dicionários, mapeamentos e layouts).
 
 ---
@@ -106,9 +108,9 @@ O **Sistema de Informações Hospitalares (SIH/SUS)** registra todas as interna�
 
 ---
 
-### **5. Produção Ambulatorial (Fonte: SIA/SUS - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
+### **5. Informações Ambulatoriais  (Fonte: SIA/SUS - DATASUS)**
 
-> 🚧 **Esta fonte está em desenvolvimento.**
+> 🚧 **Fontes em desenvolvimento.**
 
 O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produção ambulatorial do SUS - de procedimentos de baixa complexidade (BPA) às autorizações de procedimentos de alta complexidade (APAC): quimioterapia, radioterapia, diálise, medicamentos especializados, entre outros.
 
@@ -117,33 +119,34 @@ O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produçã
 **Bases disponibilizadas:**
 
 - `producao_ambulatorial/` - Produção ambulatorial (BPA), Jul/1994-atual. **Particionada por competência** (ver nota abaixo). &nbsp;`🚧`
-- `apac_medicamentos.parquet` - APAC de medicamentos, Jan/2008-atual. &nbsp;`🚧`
-- `apac_quimioterapia.parquet` - APAC de quimioterapia, Jan/2008-atual. &nbsp;`🚧`
-- `apac_radioterapia.parquet` - APAC de radioterapia, Jan/2008-atual. &nbsp;`🚧`
-- `apac_tratamento_dialitico.parquet` - APAC de tratamento dialítico, Jun/2014-atual. &nbsp;`🚧`
-- `apac_nefrologia.parquet` - APAC de nefrologia, Jan/2008 a Out/2014 (substituída pela ATD). &nbsp;`🚧`
-- `apac_laudos_diversos.parquet` - APAC de laudos diversos, Jan/2008-atual. &nbsp;`🚧`
-- `psicossocial.parquet` - RAAS Psicossocial (CAPS), Jan/2013-atual. &nbsp;`🚧`
-- `atencao_domiciliar.parquet` - RAAS de Atenção Domiciliar (SAD), Nov/2012-atual. &nbsp;`🚧`
-- `apac_confeccao_fistula.parquet` - APAC de confecção de fístula arteriovenosa, Jun/2014-atual. &nbsp;`🚧`
-- `apac_cirurgia_bariatrica.parquet` - APAC de acompanhamento a cirurgia bariátrica, Jan/2008 a Mar/2013. &nbsp;`🚧`
-- `apac_pos_cirurgia_bariatrica.parquet` - APAC de acompanhamento pós cirurgia bariátrica, Abr/2013-atual. &nbsp;`🚧`
+- `apac_medicamentos.parquet` - APAC de medicamentos, Jan/2008-atual.
+- `apac_quimioterapia.parquet` - APAC de quimioterapia, Jan/2008-atual.
+- `apac_radioterapia.parquet` - APAC de radioterapia, Jan/2008-atual.
+- `apac_tratamento_dialitico.parquet` - APAC de tratamento dialítico, Jun/2014-atual.
+- `apac_nefrologia.parquet` - APAC de nefrologia, Jan/2008 a Out/2014 (substituída pela ATD).
+- `apac_laudos_diversos.parquet` - APAC de laudos diversos, Jan/2008-atual.
+- `psicossocial.parquet` - RAAS Psicossocial (CAPS), Jan/2013-atual.
+- `atencao_domiciliar.parquet` - RAAS de Atenção Domiciliar (SAD), Nov/2012-atual.
+- `apac_confeccao_fistula.parquet` - APAC de confecção de fístula arteriovenosa, Jun/2014-atual.
+- `apac_cirurgia_bariatrica.parquet` - APAC de acompanhamento a cirurgia bariátrica, Jan/2008 a Mar/2013.
+- `apac_pos_cirurgia_bariatrica.parquet` - APAC de acompanhamento pós cirurgia bariátrica, Abr/2013-atual.
 
-#### Nota sobre a Produção Ambulatorial (PA) &nbsp;`🚧 EM DESENVOLVIMENTO`
+#### Nota sobre a Produção Ambulatorial (PA)
 
 A PA é, de longe, a maior base do DATASUS: mais de 10 mil arquivos `.dbc` e dezenas de GB, com série desde Jul/1994. Por isso ela recebe um tratamento distinto das demais fontes, que viram um único parquet consolidado:
 
 - **Particionamento por competência.** Em vez de um único `producao_ambulatorial.parquet`, a PA é publicada como uma pasta `producao_ambulatorial/` contendo um parquet por competência mensal, nomeado `producao_ambulatorial_AAAAMM.parquet` (ex.: `producao_ambulatorial_202604.parquet`). O ano de 4 dígitos faz a ordenação alfabética coincidir com a cronológica. Competências grandes que o DATASUS fatia em partes (ex.: `PASP2401a/b.dbc`) são unificadas no parquet daquela competência.
-- **Dataset Kaggle dedicado.** Pelo volume (que sozinho se aproxima do teto de 200 GB do Kaggle) e pelo modelo de publicação do dataset principal, a PA é publicada num **dataset Kaggle separado** (`sia-producao-ambulatorial`), vinculado ao principal por descrição. Isso isola o custo de reenvio e protege a estabilidade do dataset principal.
+- **Incremental barato.** Cada execução reescreve apenas as competências novas ou revisadas, não o dataset inteiro - essencial dado o volume. Como o DATASUS revisa meses recentes silenciosamente, além do que muda de tamanho reprocessa-se sempre uma margem de segurança das competências mais recentes.
+- **Processamento fatiável (backfill).** O primeiro processamento completo é pesado (dezenas de GB, potencialmente horas/dias). Para ter controle e retomada, o `process` do PA aceita filtros de janela que processam exatamente o período pedido (sem margem e ignorando o manifesto): `--ano 2024`, `--competencia 202401`, ou `--de 202001 --ate 202412`. Sem filtro, roda no modo incremental de rotina. Além disso, o manifesto é salvo em checkpoints periódicos e ao ser interrompido (Ctrl+C), então uma execução interrompida retoma de onde parou.
+- **Manifesto próprio.** A PA mantém seu próprio `producao_ambulatorial/_manifest.json` (arquivo-fonte → tamanho), independente do manifesto das outras fontes do SIA.
+- **Dataset Kaggle dedicado.** Pelo volume (que sozinho se aproxima do teto de 200 GB do Kaggle) e pelo modelo de publicação "tudo ou nada" do dataset principal, a PA é publicada num **dataset Kaggle separado** (`sia-producao-ambulatorial`), vinculado ao principal por descrição. Isso isola o custo de reenvio e protege a estabilidade do dataset principal.
 
 
 > BRASIL. Ministério da Saúde. DATASUS. *Sistema de Informações Ambulatoriais do SUS (SIA/SUS)*. Brasília, DF: Ministério da Saúde. Disponível em: <https://datasus.saude.gov.br/acesso-a-informacao/producao-ambulatorial-sia-sus/>.
 
 ---
 
-### **6. Comunicação Hospitalar e Ambulatorial (Fonte: CIHA - DATASUS)** &nbsp;`🚧 EM DESENVOLVIMENTO`
-
-> 🚧 **Esta fonte está em desenvolvimento.**
+### **6. Comunicação Hospitalar e Ambulatorial (Fonte: CIHA - DATASUS)** 
 
 O **Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)** registra internações e atendimentos ambulatoriais comunicados ao SUS, incluindo a produção **não-SUS** (particular e planos de saúde) - o que o torna complementar ao SIH/SIA, restritos à produção paga pelo SUS. Sucede o antigo CIH (2008-2010).
 
@@ -151,7 +154,7 @@ O **Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)** 
 
 **Base disponibilizada:**
 
-- `comunicacao_internacao_hospitalar_ambulatorial.parquet` - Internações e atendimentos comunicados (inclui não-SUS), Jan/2011-atual. &nbsp;`🚧`
+- `comunicacao_internacao_hospitalar_ambulatorial.parquet` - Internações e atendimentos comunicados (inclui não-SUS), Jan/2011-atual.
 
 > BRASIL. Ministério da Saúde. DATASUS. *Sistema de Comunicação de Informação Hospitalar e Ambulatorial (CIHA)*. Brasília, DF: Ministério da Saúde. Disponível em: <http://ciha.datasus.gov.br/CIHA/index.php>.
 
@@ -219,7 +222,7 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 - **CNES (rede assistencial):** retrato da competência mais recente disponível (não histórico).
 - **SIH/SUS (internações):** 2008-atual (série moderna).
 - **SIA/SUS (produção ambulatorial):** varia por subsistema - PA desde Jul/1994, APACs em geral desde Jan/2008; ver a seção da fonte para o intervalo de cada base. &nbsp;`🚧 EM DESENVOLVIMENTO`
-- **CIHA (comunicação hosp./ambulatorial):** 2011-atual. &nbsp;`🚧 EM DESENVOLVIMENTO`
+- **CIHA (comunicação hosp./ambulatorial):** 2011-atual.
 - **SINAN (agravos):** varia por agravo, geralmente a partir dos anos 2000; consultar `agravos_sinan.py` para o início exato de cada um.
 - **IBGE (população/PIB):** população desde 2001, PIB desde 2002.
 - **PNS/IBGE:** edições pontuais de 2013 e 2019.
@@ -228,8 +231,8 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 
 ## 🔄 Atualização e Confiabilidade
 
-- **SIM, SINASC, CNES, SIH, SINAN:** sincronização totalmente automatizada via FTP, com detecção de novidade real (por tamanho de arquivo) antes de reprocessar ou publicar.
-- **SIA/SUS, CIHA:** sincronização automatizada via FTP, mesma mecânica das demais fontes DATASUS. &nbsp;`🚧 EM DESENVOLVIMENTO`
+- **SIM, SINASC, CNES, SIH, SINAN, CIHA:** sincronização totalmente automatizada via FTP, com detecção de novidade real (por tamanho de arquivo) antes de reprocessar ou publicar.
+- **SIA/SUS:** sincronização automatizada via FTP, mesma mecânica das demais fontes DATASUS. &nbsp;`🚧 EM DESENVOLVIMENTO`
 - **IBGE (População/PIB):** sincronização automatizada via API, ano a ano, com descoberta dinâmica de quais anos a tabela realmente cobre.
 - **PNS/IBGE:** obtenção do microdado bruto é manual; a publicação (upload, sem transformação) é automatizada.
 - **Macrorregião de Saúde:** sincronização automatizada via HTTP.
@@ -289,7 +292,7 @@ producao_ambulatorial/                  # 🚧 PA -- particionada, dataset Kaggl
   producao_ambulatorial_202604.parquet
   _manifest.json
 
-ciha/                                   # 🚧 EM DESENVOLVIMENTO
+ciha/                                   
   comunicacao_internacao_hospitalar_ambulatorial.parquet
 
 sinan/
@@ -326,35 +329,6 @@ scratch space temporário, ver Arquitetura do Pipeline acima).
 | Comunicação S3 | boto3 |
 | Distribuição | Kaggle Python SDK (`kaggle`) |
 | Configuração | python-dotenv |
-
----
-
-### Executando o pipeline
-
-> ⚠️ **PNS 2013 e 2019**: os microdados devem ser baixados manualmente no [site do IBGE](https://www.ibge.gov.br/estatisticas/sociais/saude/9160-pesquisa-nacional-de-saude.html) e salvos em `data/landing/ibge/` como `PNS_2013.txt` e `PNS_2019.txt`.
->
-> ⚠️ **Macrorregiões**: o arquivo `macro_geolocalizacao.xls` deve estar presente em `data/landing/csv_macroregiao/` antes de executar o processamento.
-
-A lista completa de fontes, com seus respectivos módulos de extração e processamento, está em `scripts/config/fontes.py`.
-
-**Gerar o manifesto de metadados** (roda a qualquer momento, lista o bucket real e não depende de nenhuma fonte específica ter rodado antes)
-
-```bash
-python -m scripts.process.process_metadados
-```
-
-**Publicação no Kaggle**
-
-```bash
-python -m scripts.kaggle.load_kaggle_datahub
-```
-
-O comando publica em **dois datasets Kaggle** (mesmo usuário), roteando por prefixo do bucket:
-
-- **Principal** (`brazilian-kaggle-datahub`): todas as fontes, exceto a Produção Ambulatorial.
-- **PA dedicado** (`sia-producao-ambulatorial`): apenas os objetos sob `producao_ambulatorial/`. &nbsp;`🚧 EM DESENVOLVIMENTO`
-
-Cada dataset tem seu próprio cache local e sobe somente os seus arquivos. As descrições são mantidas manualmente no Kaggle - o script preserva a descrição existente e só semeia uma mínima (com link cruzado entre os dois datasets) na primeira publicação de cada um.
 
 ---
 

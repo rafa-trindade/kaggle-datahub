@@ -4,10 +4,12 @@ import gc
 from pathlib import Path
 import datasus_dbc
 from simpledbf import Dbf5 
+from dbfread import DBF  
 import duckdb
 import shutil
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pandas as pd
 
 from scripts.common.paths import BASE_DIR
 from scripts.common import simpledbf_patch  # corrige bug de data zerada (00000000) na lib
@@ -15,8 +17,99 @@ from scripts.common import simpledbf_patch  # corrige bug de data zerada (000000
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Temp dir DuckDB (configurável via env, fallback no projeto)
 DUCKDB_TEMP_DIR = Path(os.environ.get("DUCKDB_TEMP_DIR", str(BASE_DIR / "data" / ".duckdb_temp")))
+
+
+def _fechar_dbf(dbf):
+    """Fecha o handle do simpledbf com segurança para evitar lock de arquivo no Windows."""
+    if dbf is None:
+        return
+    try:
+        dbf.f.close()
+    except (AttributeError, ValueError, OSError):
+        pass
+
+
+def _remover_seguro(caminho: str, tentativas: int = 5, espera: float = 0.2) -> bool:
+    """os.remove com retries para lidar com lock momentâneo do Windows (WinError 32)."""
+    import time
+    for i in range(tentativas):
+        try:
+            if os.path.exists(caminho):
+                os.remove(caminho)
+            return True
+        except PermissionError:
+            time.sleep(espera * (i + 1))
+        except OSError:
+            break
+    return not os.path.exists(caminho)
+
+
+def _quarentena(dbc_dir: Path, caminho_dbc: str, arquivo: str):
+    """Move um .dbc corrompido para _corrompidos/ evitando travamentos nas re-execuções."""
+    try:
+        quarentena_dir = dbc_dir / "_corrompidos"
+        quarentena_dir.mkdir(exist_ok=True)
+        destino = str(quarentena_dir / arquivo)
+        if os.path.exists(destino):
+            _remover_seguro(destino)
+        shutil.move(caminho_dbc, destino)
+        logger.warning(f"   ↳ {arquivo} movido para _corrompidos/ para inspeção.")
+    except OSError as e:
+        logger.warning(f"   ↳ Não foi possível mover {arquivo} para quarentena: {e}")
+
+
+def _iter_chunks_simpledbf(caminho_dbf: str, chunksize: int):
+    """Lê DBF via simpledbf em chunks (gera DataFrames string). Levanta AssertionError se o header for incompatível."""
+    dbf = Dbf5(caminho_dbf, codec="latin1")
+    try:
+        for df_chunk in dbf.to_dataframe(chunksize=chunksize):
+            yield df_chunk.astype(str)
+    finally:
+        _fechar_dbf(dbf)
+
+
+def _iter_chunks_dbfread(caminho_dbf: str, chunksize: int):
+    """Fallback: lê DBF via dbfread. Normaliza strings vazias para NaN para manter a paridade com o simpledbf."""
+    import numpy as np
+
+    def _para_string(df: pd.DataFrame) -> pd.DataFrame:
+        """Converte DataFrame para string, mascarando strings vazias/espaços como NaN."""
+        out = df.astype(str)
+        for col in out.columns:
+            vazio = out[col].str.strip().isin(["", "None", "nan", "NaT"])
+            out[col] = out[col].mask(vazio, np.nan)
+        return out
+
+    tabela = DBF(caminho_dbf, encoding="latin1", ignore_missing_memofile=True,
+                 char_decode_errors="replace")
+    buffer = []
+    for registro in tabela:
+        buffer.append(registro)
+        if len(buffer) >= chunksize:
+            yield _para_string(pd.DataFrame(buffer))
+            buffer.clear()
+            gc.collect()
+    if buffer:
+        yield _para_string(pd.DataFrame(buffer))
+
+
+def _iter_chunks_dbf(caminho_dbf: str, arquivo: str, chunksize: int = 250_000):
+    """Tenta ler em chunks via simpledbf; cai para dbfread caso o arquivo tenha header rejeitado."""
+    try:
+
+        gerador = _iter_chunks_simpledbf(caminho_dbf, chunksize)
+        primeiro = next(gerador, None)
+    except AssertionError:
+        gc.collect()
+        logger.warning(f"   ↳ simpledbf recusou {arquivo}; usando dbfread (fallback).")
+        yield from _iter_chunks_dbfread(caminho_dbf, chunksize)
+        return
+
+    # simpledbf aceitou: repassa o primeiro chunk e o restante
+    if primeiro is not None:
+        yield primeiro
+        yield from gerador
 
 
 def listar_dbc_deduplicados(dbc_dir: Path) -> list[str]:
@@ -48,7 +141,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     temp_dir.mkdir(exist_ok=True)
 
     # ---------------------------------------------------------
-    # # Fase 1: DBC -> DBF -> Parquets intermediários
+    # # Fase 1: DBC -> DBF -> Parquets intermediários (em lotes)
     # ---------------------------------------------------------
     logger.info("Fase 1: Convertendo DBCs para Parquets intermediários (em lotes)...")
     parquets_gerados = []
@@ -64,44 +157,43 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
             continue
             
         logger.info(f"[{idx}/{len(arquivos_dbc)}] Convertendo {arquivo}...")
+        parquet_writer = None
         try:
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             datasus_dbc.decompress(caminho_dbc, caminho_dbf)
-            
-            dbf = Dbf5(caminho_dbf, codec='latin1')
-            
-            parquet_writer = None
-            
-            for df_chunk in dbf.to_dataframe(chunksize=250_000):
-                df_chunk = df_chunk.astype(str)
+
+            for df_chunk in _iter_chunks_dbf(caminho_dbf, arquivo, chunksize=250_000):
                 df_chunk["_ARQUIVO_ORIGEM"] = arquivo   # rastrear origem para merge incremental
                 table = pa.Table.from_pandas(df_chunk)
-                
+
                 if parquet_writer is None:
                     parquet_writer = pq.ParquetWriter(caminho_parquet_temp, table.schema)
-                
+
                 parquet_writer.write_table(table)
-                
+
                 del df_chunk
                 del table
                 gc.collect()
-                
+
             if parquet_writer:
                 parquet_writer.close()
 
-            dbf.f.close()  # simpledbf não fecha handle sozinho (impede delete no Windows)
-            
             parquets_gerados.append(caminho_parquet_temp)
-            os.remove(caminho_dbf)
-            os.remove(caminho_dbc) 
-            
+            _remover_seguro(caminho_dbf)
+            _remover_seguro(caminho_dbc)
+
         except Exception as e:
-            logger.error(f"❌ Falha ao converter {arquivo}: {e}")
+            logger.error(f"❌ Falha ao converter {arquivo}: {type(e).__name__}: {e}")
             try:
-                dbf.f.close()
-            except (NameError, AttributeError, ValueError):
-                pass  # dbf pode não existir ou handle já estar fechado
-            if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
+                if parquet_writer:
+                    parquet_writer.close()
+            except (ValueError, OSError):
+                pass
+            _remover_seguro(caminho_dbf)
+            _remover_seguro(caminho_parquet_temp)  # parquet meio-escrito, se houver
+            if os.path.exists(caminho_dbc):
+                _quarentena(dbc_dir, caminho_dbc, arquivo)
+            continue
 
     if not parquets_gerados:
         logger.error("Nenhum arquivo convertido com sucesso. Abortando.")
@@ -150,11 +242,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
 
 
 def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str) -> bool:
-    """Processa .dbc novo/alterado e mescla com Parquet já publicado.
-
-    Evita duplicação quando DATASUS revisa dados; preserva histórico.
-    Usa DuckDB para não sobrecarregar memória.
-    """
+    """Processa novos .dbc e usa DuckDB para mesclá-los ao Parquet já publicado, atualizando revisões."""
     from scripts.common.bucket_sync import get_s3_client, upload_and_cleanup
     from scripts.common import env
 
@@ -254,11 +342,7 @@ def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqui
 
 def processar_fonte_ftp_substituicao_completa(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str,
                                                 chave_manifesto_prefixo: str) -> int:
-    """Processa fontes que são retrato (não série histórica).
-
-    Substitui completo, não mescla. chave_manifesto_prefixo limpa
-    entradas antigas desta fonte no manifesto compartilhado.
-    """
+    """Processa fontes estáticas (retrato), realizando substituição completa em vez de mesclagem."""
     from scripts.common import exit_codes
     from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto, upload_and_cleanup
 
