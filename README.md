@@ -313,6 +313,22 @@ scratch space temporário, ver Arquitetura do Pipeline acima).
 
 ---
 
+## 📥 Baixando as Bases
+
+Para quem só quer **consumir** os dados, há um utilitário pronto na pasta [`download-datasets/`](download-datasets/) que baixa bases específicas - ou todas - direto dos datasets no Kaggle, via API.
+
+- Suporta os dois datasets: **principal** (`brazilian-kaggle-datahub`) e **PA** (`sia-producao-ambulatorial`).
+- Baixa tudo, uma base específica, várias, ou - no caso da Produção Ambulatorial - um intervalo de competências (ex.: todo o ano de 2024) via `PA_DE` / `PA_ATE`.
+- O passo a passo completo (incluindo como obter a chave da API do Kaggle e onde colocá-la) está no [`download-datasets/README.md`](download-datasets/README.md).
+
+```bash
+cd download-datasets
+python baixar_dataset.py           # baixa conforme a configuração no topo do script
+python baixar_dataset.py --listar  # lista os arquivos disponíveis no dataset
+```
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 | Camada | Tecnologia |
