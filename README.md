@@ -110,15 +110,13 @@ O **Sistema de Informações Hospitalares (SIH/SUS)** registra todas as interna�
 
 ### **5. Informações Ambulatoriais  (Fonte: SIA/SUS - DATASUS)**
 
-> 🚧 **Fontes em desenvolvimento.**
-
 O **Sistema de Informações Ambulatoriais (SIA/SUS)** registra toda a produção ambulatorial do SUS - de procedimentos de baixa complexidade (BPA) às autorizações de procedimentos de alta complexidade (APAC): quimioterapia, radioterapia, diálise, medicamentos especializados, entre outros.
 
 **Escopo e Processamento:** Baixados via FTP público do DATASUS os arquivos `.dbc` de cada subsistema (um por UF/mês), diferenciados pelo prefixo do nome do arquivo, convertidos para Parquet e mesclados incrementalmente - mesma mecânica do SIM/SIH. A série moderna vive em `SIASUS/200801_/Dados`; a Produção Ambulatorial (PA), por começar em Jul/1994, também é varrida na pasta legada `SIASUS/199407_200712/Dados`. Alguns prefixos são prefixo um do outro (ex.: `AB` vs `ABO`), então o filtro valida o comprimento exato de `{UF}{AAMM}` para não haver captura cruzada.
 
 **Bases disponibilizadas:**
 
-- `producao_ambulatorial/` - Produção ambulatorial (BPA), Jul/1994-atual. **Particionada por competência** (ver nota abaixo). &nbsp;`🚧`
+- `producao_ambulatorial/` - Produção ambulatorial (BPA), Jul/1994-atual. **Particionada por competência** (ver nota abaixo).
 - `apac_medicamentos.parquet` - APAC de medicamentos, Jan/2008-atual.
 - `apac_quimioterapia.parquet` - APAC de quimioterapia, Jan/2008-atual.
 - `apac_radioterapia.parquet` - APAC de radioterapia, Jan/2008-atual.
@@ -221,7 +219,7 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 - **SINASC (nascimentos):** 1994-atual.
 - **CNES (rede assistencial):** retrato da competência mais recente disponível (não histórico).
 - **SIH/SUS (internações):** 2008-atual (série moderna).
-- **SIA/SUS (produção ambulatorial):** varia por subsistema - PA desde Jul/1994, APACs em geral desde Jan/2008; ver a seção da fonte para o intervalo de cada base. &nbsp;`🚧 EM DESENVOLVIMENTO`
+- **SIA/SUS (produção ambulatorial):** varia por subsistema - PA desde Jul/1994, APACs em geral desde Jan/2008; ver a seção da fonte para o intervalo de cada base.
 - **CIHA (comunicação hosp./ambulatorial):** 2011-atual.
 - **SINAN (agravos):** varia por agravo, geralmente a partir dos anos 2000; consultar `agravos_sinan.py` para o início exato de cada um.
 - **IBGE (população/PIB):** população desde 2001, PIB desde 2002.
@@ -232,7 +230,7 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 ## 🔄 Atualização e Confiabilidade
 
 - **SIM, SINASC, CNES, SIH, SINAN, CIHA:** sincronização totalmente automatizada via FTP, com detecção de novidade real (por tamanho de arquivo) antes de reprocessar ou publicar.
-- **SIA/SUS:** sincronização automatizada via FTP, mesma mecânica das demais fontes DATASUS. &nbsp;`🚧 EM DESENVOLVIMENTO`
+- **SIA/SUS:** sincronização automatizada via FTP, mesma mecânica das demais fontes DATASUS.
 - **IBGE (População/PIB):** sincronização automatizada via API, ano a ano, com descoberta dinâmica de quais anos a tabela realmente cobre.
 - **PNS/IBGE:** obtenção do microdado bruto é manual; a publicação (upload, sem transformação) é automatizada.
 - **Macrorregião de Saúde:** sincronização automatizada via HTTP.
@@ -272,7 +270,7 @@ sih/
   aih_rejeitada.parquet
   servicos_profissionais.parquet
 
-sia/                                    # 🚧 EM DESENVOLVIMENTO
+sia/                                   
   apac_medicamentos.parquet
   apac_quimioterapia.parquet
   apac_radioterapia.parquet
@@ -285,7 +283,7 @@ sia/                                    # 🚧 EM DESENVOLVIMENTO
   apac_cirurgia_bariatrica.parquet
   apac_pos_cirurgia_bariatrica.parquet
 
-producao_ambulatorial/                  # 🚧 PA -- particionada, dataset Kaggle dedicado
+producao_ambulatorial/                  
   producao_ambulatorial_199407.parquet
   producao_ambulatorial_199408.parquet
   ...
