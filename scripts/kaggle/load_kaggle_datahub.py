@@ -124,14 +124,40 @@ def _descricao_inicial(qual: str, kaggle_user: str) -> str:
     )
 
 
-def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path):
-    """Baixa novos/alterados para o cache e remove órfãos. Retorna (baixados, removidos)."""
+def _caminho_local_no_cache(s3_key: str, reorganizar_pa: bool) -> str:
+    """Decide o caminho relativo no cache. Se reorganizar_pa=True, agrupa os parquets por ano."""
+    if not reorganizar_pa:
+        return s3_key
+
+    import re
+    nome = s3_key.rsplit("/", 1)[-1]
+    m = re.search(r"_(\d{4})\d{2}\.parquet$", nome)
+    if m:
+        ano = m.group(1)
+        return f"{ano}/{nome}"
+    # o manifesto vai para uma subpasta própria, deixando a raiz do dataset
+    # limpa (só o metadados CSV abre direto na página do Kaggle)
+    if nome == "_manifest.json":
+        return f"manifesto/{nome}"
+    # demais arquivos de raiz (ex.: o metadados CSV) ficam na raiz do dataset
+    return nome
+
+
+def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path,
+                       reorganizar_pa: bool = False):
+    """Sincroniza arquivos locais com o Lake (baixa novidades, remove órfãos)."""
     cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # mapa: caminho_relativo_no_cache -> (s3_key, tamanho)
+    mapa_local = {}
+    for s3_key, tam in objetos_do_dataset.items():
+        rel = _caminho_local_no_cache(s3_key, reorganizar_pa)
+        mapa_local[rel] = (s3_key, tam)
 
     baixados = 0
     reaproveitados = 0
-    for s3_key, tamanho_remoto in objetos_do_dataset.items():
-        destino = cache_dir / s3_key
+    for rel, (s3_key, tamanho_remoto) in mapa_local.items():
+        destino = cache_dir / rel
         if destino.exists() and destino.stat().st_size == tamanho_remoto:
             reaproveitados += 1
             continue
@@ -150,7 +176,7 @@ def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path):
     # Remove do cache o que não pertence mais a este dataset (órfãos), preservando
     # os arquivos de controle nossos.
     ARQUIVOS_DE_CONTROLE = {"dataset-metadata.json", ".ultima_publicacao_sucesso"}
-    chaves_esperadas = set(objetos_do_dataset.keys())
+    chaves_esperadas = set(mapa_local.keys())
     removidos = 0
     for caminho_local in cache_dir.rglob("*"):
         if caminho_local.is_file():
@@ -160,6 +186,13 @@ def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path):
                 removidos += 1
     if removidos:
         logger.info(f"✔ {removidos} órfão(s) removido(s) do cache (não pertencem mais a este dataset).")
+        # remove pastas de ano que ficaram vazias após a limpeza
+        for d in sorted(cache_dir.rglob("*"), reverse=True):
+            if d.is_dir() and not any(d.iterdir()):
+                try:
+                    d.rmdir()
+                except OSError:
+                    pass
 
     return baixados, removidos
 
@@ -239,7 +272,10 @@ def _publicar_dataset(api, s3_client, *, qual: str, dataset_slug: str, titulo: s
 
     logger.info(f"Cache: {cache_dir} ({len(objetos_do_dataset)} arquivo(s) esperado(s))")
 
-    baixados, removidos = _sincronizar_cache(s3_client, objetos_do_dataset, cache_dir)
+    baixados, removidos = _sincronizar_cache(
+        s3_client, objetos_do_dataset, cache_dir,
+        reorganizar_pa=(qual == "pa"),
+    )
 
     marcador_sucesso = cache_dir / ".ultima_publicacao_sucesso"
     if (baixados > 0 or removidos > 0) and marcador_sucesso.exists():

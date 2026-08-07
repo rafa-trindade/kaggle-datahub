@@ -25,8 +25,9 @@ dbt/logs/
 *PNS_2019.txt
 *.csv
 .xls
+*.ps1
 
 !docs/datahub-metadados.csv
-!docs/_datahub-pa-metadados.csv
+!docs/datahub-pa-metadados.csv
 
 latest

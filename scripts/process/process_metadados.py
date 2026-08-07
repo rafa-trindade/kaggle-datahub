@@ -15,7 +15,7 @@ CAMINHO_LOCAL_PERSISTENTE = BASE_DIR / "docs" / NOME_ARQUIVO_SAIDA
 
 # Metadados dedicado do PA
 PREFIXO_PA = "producao_ambulatorial/"
-NOME_METADADOS_PA = "_datahub-pa-metadados.csv"
+NOME_METADADOS_PA = "datahub-pa-metadados.csv"
 CAMINHO_LOCAL_PA = BASE_DIR / "docs" / NOME_METADADOS_PA
 
 COLUNAS = ["arquivo", "diretorio", "nome_fonte", "descricao", "tamanho_bytes", "num_registros", "ultima_atualizacao"]

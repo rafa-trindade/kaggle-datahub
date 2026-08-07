@@ -7,7 +7,7 @@ Dois datasets são suportados:
 | Chave | Dataset no Kaggle | Conteúdo |
 |-------|-------------------|----------|
 | `principal` | [`rafatrindade/brazilian-kaggle-datahub`](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub) | SIM, SINASC, CNES, SIH, SIA (APACs/RAAS), CIHA, SINAN, IBGE, PNS |
-| `pa` | [`rafatrindade/sia-producao-ambulatorial`](https://www.kaggle.com/datasets/rafatrindade/sia-producao-ambulatorial) | Produção Ambulatorial (SIA/PA), particionada por competência mensal |
+| `pa` | [`rafatrindade/sia-producao-ambulatorial`](https://www.kaggle.com/datasets/rafatrindade/sia-producao-ambulatorial) | Produção Ambulatorial (SIA/PA), particionada por competência mensal em pastas por ano (`1994/` ... `2026/`) |
 
 ---
 
@@ -123,12 +123,14 @@ ARQUIVOS = ["dengue.parquet", "tuberculose.parquet"]
 
 # Baixar uma competência específica da Produção Ambulatorial:
 DATASET = "pa"
-ARQUIVOS = ["producao_ambulatorial_202401.parquet"]
+ARQUIVOS = ["1994/producao_ambulatorial_199407.parquet"]
 ```
+
+> No dataset da **Produção Ambulatorial**, os arquivos são organizados em **pastas por ano** (`1994/`, `1995/`, ... `2026/`); os metadados e o manifesto ficam na raiz. Ao usar `ARQUIVOS` no dataset `pa`, inclua o ano no caminho (ex.: `"2024/producao_ambulatorial_202401.parquet"`). O filtro por intervalo abaixo já cuida disso automaticamente.
 
 ### Baixar um intervalo de competências da PA (atalho)
 
-Para o dataset `pa`, em vez de listar mês a mês em `ARQUIVOS`, você pode usar o filtro de intervalo `PA_DE` / `PA_ATE` (formato `AAAAMM`). Quando preenchido, ele tem prioridade sobre `ARQUIVOS`:
+Para o dataset `pa`, em vez de listar mês a mês em `ARQUIVOS`, você pode usar o filtro de intervalo `PA_DE` / `PA_ATE` (formato `AAAAMM`). Quando preenchido, ele tem prioridade sobre `ARQUIVOS` e já resolve as pastas de ano sozinho:
 
 ```python
 DATASET = "pa"
@@ -141,7 +143,7 @@ PA_ATE = "202412"   # até dezembro/2024   -> baixa as 12 competências do ano
 # PA_DE, PA_ATE = "202403", "202403"   # só março/2024
 ```
 
-Deixe `PA_DE` e `PA_ATE` como `None` (padrão) para não usar o filtro de intervalo.
+Deixe `PA_DE` e `PA_ATE` como `None` (padrão) para não usar o filtro de intervalo. Os arquivos baixados preservam a pasta do ano em `DESTINO` (ex.: `dados/2024/producao_ambulatorial_202401.parquet`).
 
 > **Não sabe o nome exato dos arquivos?** Veja a seção 6 (Listar).
 
@@ -183,14 +185,18 @@ print(df.shape)
 print(df.head())
 ```
 
-Para a **Produção Ambulatorial**, cada arquivo é uma competência mensal. Para ler vários meses de uma vez:
+Para a **Produção Ambulatorial**, cada arquivo é uma competência mensal, organizada em pastas por ano. Para ler vários meses de uma vez:
 
 ```python
 import pandas as pd
 import glob
 
-arquivos = glob.glob("dados/producao_ambulatorial_2024*.parquet")  # todo o ano de 2024
+# todo o ano de 2024 (arquivos em dados/2024/)
+arquivos = glob.glob("dados/2024/producao_ambulatorial_2024*.parquet")
 df = pd.concat((pd.read_parquet(f) for f in arquivos), ignore_index=True)
+
+# ou vários anos de uma vez (busca recursiva):
+arquivos = glob.glob("dados/**/producao_ambulatorial_*.parquet", recursive=True)
 ```
 
 > ⚠️ **Atenção ao layout da PA:** competências de 1994-2007 têm um conjunto de colunas diferente das de 2008 em diante (mudança oficial do DATASUS). Ao concatenar as duas eras, alinhe as colunas conforme sua necessidade.
@@ -209,4 +215,3 @@ df = pd.concat((pd.read_parquet(f) for f in arquivos), ignore_index=True)
 ---
 
 Parte do projeto **[DataHub Brasil](https://github.com/rafa-trindade/kaggle-datahub)**.
-

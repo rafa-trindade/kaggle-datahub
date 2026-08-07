@@ -16,7 +16,7 @@ import os
 import sys
 
 # ==========================================================================
-# CONFIGURAÇÃO  -- edite esta seção
+# CONFIGURAÇÃO
 # ==========================================================================
 
 # Qual dataset baixar: "principal" ou "pa"
@@ -54,7 +54,7 @@ DESCOMPACTAR = True
 SOBRESCREVER = False
 
 # ==========================================================================
-# Fim da configuração
+# Fim da configuração -- daqui para baixo não precisa editar.
 # ==========================================================================
 
 DATASETS = {
@@ -163,36 +163,38 @@ def main():
     print(f"Serão baixados {len(alvo)} arquivo(s) para: {os.path.abspath(DESTINO)}\n")
 
     for i, nome in enumerate(alvo, 1):
+
+        subpasta = os.path.dirname(nome)
+        destino_pasta = os.path.join(DESTINO, subpasta) if subpasta else DESTINO
         destino_final = os.path.join(DESTINO, nome)
         if os.path.exists(destino_final) and not SOBRESCREVER:
             print(f"[{i}/{len(alvo)}] {nome} -- já existe, pulando (SOBRESCREVER=False).")
             continue
+        os.makedirs(destino_pasta, exist_ok=True)
         print(f"[{i}/{len(alvo)}] Baixando {nome} ...")
         try:
             api.dataset_download_file(
-                dataset_id, nome, path=DESTINO,
+                dataset_id, nome, path=destino_pasta,
                 force=SOBRESCREVER, quiet=False,
             )
         except Exception as e:
             print(f"    [ERRO] falha ao baixar {nome}: {e}")
             continue
 
-    # descompacta os .zip que o Kaggle entrega
     if DESCOMPACTAR:
         import zipfile
         import glob
-        zips = glob.glob(os.path.join(DESTINO, "*.zip"))
+        zips = glob.glob(os.path.join(DESTINO, "**", "*.zip"), recursive=True)
         for z in zips:
             try:
                 with zipfile.ZipFile(z) as zf:
-                    zf.extractall(DESTINO)
+                    zf.extractall(os.path.dirname(z))
                 os.remove(z)
-                print(f"  descompactado: {os.path.basename(z)}")
+                print(f"  descompactado: {os.path.relpath(z, DESTINO)}")
             except zipfile.BadZipFile:
                 print(f"  [AVISO] {os.path.basename(z)} não é um zip válido -- mantido.")
 
     print("\nConcluído.")
-
 
 
 def listar():
