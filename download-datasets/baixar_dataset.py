@@ -210,6 +210,7 @@ def listar():
     for n in sorted(nomes):
         print(f"  {n}")
 
+        
 
 if __name__ == "__main__":
     if "--listar" in sys.argv or "-l" in sys.argv:

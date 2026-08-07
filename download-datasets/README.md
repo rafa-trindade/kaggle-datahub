@@ -215,3 +215,4 @@ arquivos = glob.glob("dados/**/producao_ambulatorial_*.parquet", recursive=True)
 ---
 
 Parte do projeto **[DataHub Brasil](https://github.com/rafa-trindade/kaggle-datahub)**.
+
