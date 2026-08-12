@@ -24,10 +24,16 @@ def criar_regra(prefixo: str):
     return regra
 
 
-def executar_fetch(prefixo: str, output_subdir: str, diretorios_ftp: list[str] | None = None):
-    """Sincroniza um prefixo do SIA varrendo os diretórios FTP fornecidos (padrão: moderno)."""
+def executar_fetch(prefixo: str, output_subdir: str, diretorios_ftp: list[str] | None = None,
+                   pasta_bucket: str | None = None):
+    """Sincroniza um prefixo do SIA varrendo os diretórios FTP fornecidos.
+    
+    Permite injetar `pasta_bucket` para apontar o manifesto correto (ex: PA usa manifesto próprio).
+    """
     if diretorios_ftp is None:
         diretorios_ftp = [DIRETORIO_FTP_MODERNO]
+    if pasta_bucket is None:
+        pasta_bucket = PASTA_BUCKET
 
     output_dir = str(LANDING_DIR / output_subdir)
     regra = criar_regra(prefixo)
@@ -36,7 +42,7 @@ def executar_fetch(prefixo: str, output_subdir: str, diretorios_ftp: list[str] |
     houve_novidade = False
     for diretorio in diretorios_ftp:
         print(f"Sincronizando dados {prefixo} do diretório: {diretorio}")
-        sucesso, novidade = sincronizar_ftp(diretorio, output_dir, regra, pasta_bucket=PASTA_BUCKET)
+        sucesso, novidade = sincronizar_ftp(diretorio, output_dir, regra, pasta_bucket=pasta_bucket)
         sucesso_geral = sucesso_geral and sucesso
         houve_novidade = houve_novidade or novidade
 
