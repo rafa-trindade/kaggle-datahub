@@ -50,8 +50,35 @@ def get_tamanho_ftp(ftp: FTP, nome_arquivo: str) -> int | None:
     except error_perm:
         return None
 
+
+def _verificar_em_lote(ftp: FTP, arquivos: list[str], manifesto: dict | None) -> list[str]:
+    """Reaproveita a conexão FTP aberta para consultar o tamanho dos arquivos em lote, 
+    devolvendo apenas os que precisam de download (novos ou alterados em relação ao manifesto)."""
+    precisam_download = []
+    ja_ok = 0
+    for nome in arquivos:
+        try:
+            tamanho_ftp = ftp.size(nome)
+        except (error_perm, Exception) as e:
+            # se não der pra checar o tamanho aqui, manda para o fluxo normal
+            # de download (que tem retry robusto) para decidir por lá
+            logger.warning(f"[VERIFICA] não consegui o tamanho de {nome} em lote ({type(e).__name__}); "
+                           f"será tratado no download.")
+            precisam_download.append(nome)
+            continue
+
+        if manifesto is not None and manifesto.get(nome.upper()) == tamanho_ftp:
+            ja_ok += 1
+            continue  # já incorporado, tamanho bate -> pula
+        precisam_download.append(nome)
+
+    if ja_ok:
+        print(f"[VERIFICA-LOTE] {ja_ok} arquivo(s) recente(s) conferido(s) numa unica conexao "
+              f"(tamanho bate com o manifesto) -- sem download.")
+    return precisam_download
+
 def _backoff(attempt: int):
-    """Backoff exponencial com jitter, evita retries sincronizados."""
+    """Espera com backoff exponencial + jitter para evitar saturação do servidor."""
     espera = min(RETRY_DELAY * (2 ** attempt), 120) + random.uniform(0, 3)
     logger.info(f"Aguardando {espera:.1f}s antes de tentar de novo...")
     time.sleep(espera)
@@ -125,10 +152,7 @@ def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
     return False, False
 
 def _chave_recencia(nome_arquivo: str) -> str:
-    """Extrai dígitos finais (competência) antes da extensão.
-
-    Evita ordenar por nome inteiro (UF domina alfabeto).
-    """
+    """Extrai os dígitos da competência no final do nome para ordenação cronológica."""
     m = re.search(r"(\d+)\.\w+$", nome_arquivo, re.IGNORECASE)
     return m.group(1) if m else nome_arquivo
 
@@ -148,12 +172,7 @@ def _deduplicar_case(nomes: list[str]) -> list[str]:
 
 def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str], bool],
                      pasta_bucket: str | None = None, verificar_ultimas_n_competencias: int = 2) -> tuple[bool, bool]:
-    """Retorna (sucesso, houve_novidade).
-
-    pasta_bucket: carrega manifesto para filtrar arquivos (opcional).
-    verificar_ultimas_n_competencias: otimização para histórico grande.
-    Agrupa por competência, valida apenas N recentes + novos.
-    """
+    """Lista e baixa arquivos FTP. Otimiza checando na rede apenas as N competências mais recentes."""
     ensure_output_dir(output_dir)
     logger.info(f"Conectando a {FTP_HOST} ({ftp_dir}) para listar arquivos...")
     relevantes = []
@@ -162,6 +181,8 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
     if manifesto is not None:
         manifesto = {k.upper(): v for k, v in manifesto.items()}
 
+    relevantes = []
+    a_verificar = None  # preenchido dentro da conexão, se houver manifesto
     for attempt in range(MAX_RETRIES):
         try:
             ip_v4 = socket.gethostbyname(FTP_HOST)
@@ -185,6 +206,27 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                     print(f"[AVISO] {duplicatas} duplicata(s) por maiúscula/minúscula removida(s).")
 
                 print(f"Sucesso ao listar! {len(relevantes)} arquivos passaram no filtro.")
+
+                # Pula antigas do manifesto (sem bater na rede) e valida as recentes em lote (1 conexão).
+                if manifesto is not None and relevantes:
+                    competencias_distintas = sorted(set(_chave_recencia(arq) for arq in relevantes))
+                    competencias_recentes = set(competencias_distintas[-verificar_ultimas_n_competencias:])
+
+                    candidatos = []
+                    pulados_sem_rede = 0
+                    for arq in relevantes:
+                        competencia = _chave_recencia(arq)
+                        if competencia in competencias_recentes or arq.upper() not in manifesto:
+                            candidatos.append(arq)
+                        else:
+                            pulados_sem_rede += 1
+
+                    if pulados_sem_rede:
+                        print(f"[OTIMIZAÇÃO] {pulados_sem_rede} arquivo(s) de competência(s) antiga(s) já "
+                              f"confirmado(s) no manifesto -- pulando verificação de rede.")
+
+                    # verificação em lote na conexão aberta -> só o que mudou vai p/ download
+                    a_verificar = _verificar_em_lote(ftp, candidatos, manifesto)
                 break
 
         except Exception as e:
@@ -194,30 +236,12 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                 return False, False
             _backoff(attempt)
 
-    # Otimização: pula verificação pra competências antigas (agrupa por competência)
-    if manifesto is not None and relevantes:
-        competencias_distintas = sorted(set(_chave_recencia(arq) for arq in relevantes))
-        competencias_recentes = set(competencias_distintas[-verificar_ultimas_n_competencias:])
-
-        a_verificar = []
-        pulados_sem_rede = 0
-        for arq in relevantes:
-            competencia = _chave_recencia(arq)
-            if competencia in competencias_recentes or arq.upper() not in manifesto:
-                a_verificar.append(arq)
-            else:
-                pulados_sem_rede += 1
-
-        if pulados_sem_rede:
-            print(f"[OTIMIZAÇÃO] {pulados_sem_rede} arquivo(s) de competência(s) antiga(s) já "
-                  f"confirmado(s) no manifesto -- pulando verificação de rede (só as "
-                  f"{verificar_ultimas_n_competencias} competência(s) mais recentes, "
-                  f"todas as UFs, + arquivos novos são checados de fato).")
-        relevantes = a_verificar
+    # se houve verificação em lote, baixa só o que sobrou; senão, baixa os relevantes
+    fila_download = a_verificar if a_verificar is not None else relevantes
 
     sucesso_geral = True
     houve_novidade = False
-    for arq in relevantes:
+    for arq in fila_download:
         sucesso, novidade = baixar_arquivo(ftp_dir, arq, output_dir, manifesto=manifesto)
         sucesso_geral = sucesso_geral and sucesso
         houve_novidade = houve_novidade or novidade
