@@ -138,7 +138,7 @@ def _competencias_afetadas(
 
     # 2) margem de segurança: N competências mais recentes presentes no disco
     competencias_ordenadas = sorted(grupos.keys()) 
-
+    
     # Guard explícito, pois list[-0:] retorna a lista inteira (reprocessaria tudo)
     if COMPETENCIAS_MARGEM > 0:
         margem = set(competencias_ordenadas[-COMPETENCIAS_MARGEM:])
