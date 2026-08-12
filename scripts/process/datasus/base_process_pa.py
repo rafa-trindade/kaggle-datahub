@@ -1,43 +1,8 @@
-"""Processamento PARTICIONADO do PA (Produção Ambulatorial do SIA/SUS).
+"""Processamento particionado do PA (Produção Ambulatorial do SIA/SUS).
 
-Por que o PA é diferente das outras fontes
-------------------------------------------
-As demais fontes viram um único parquet consolidado (merge incremental que
-baixa o parquet inteiro, funde e reescreve). O PA é grande demais para isso:
-são ~10 mil arquivos .dbc e dezenas de GB de parquet final. Baixar/reescrever/
-subir esse volume a cada execução é inviável, e um parquet único estoura o
-limite de tamanho por arquivo do Kaggle.
-
-Estratégia adotada
-------------------
-Particionamos por COMPETÊNCIA (ano-mês). Cada competência vira um parquet
-próprio, publicado numa pasta dedicada:
-
-    producao_ambulatorial/
-        producao_ambulatorial_199407.parquet
-        producao_ambulatorial_199408.parquet
-        ...
-        producao_ambulatorial_202604.parquet
-        _manifest.json
-
-Vantagens: cada arquivo fica pequeno (bem abaixo do limite do Kaggle); o
-incremental reescreve apenas as competências afetadas, não o dataset inteiro;
-a ordenação alfabética coincide com a cronológica (AAAAMM, ano de 4 dígitos).
-
-Unidade de rastreio x unidade de reprocessamento
-------------------------------------------------
-O DATASUS fatia competências grandes em partes (PASP2401a.dbc, ...b.dbc). O
-MANIFESTO rastreia cada arquivo-fonte .dbc individual (nome -> tamanho). Mas a
-UNIDADE DE REPROCESSAMENTO é a competência: se qualquer parte de uma
-competência é nova ou mudou de tamanho, o parquet daquela competência inteira
-é reescrito (garante consistência, sem merge parcial dentro do mês).
-
-Margem de segurança
--------------------
-O DATASUS costuma revisar competências recentes silenciosamente. Além das
-competências detectadas como novas/alteradas pelo manifesto, reprocessamos
-também as N competências mais recentes presentes no disco (COMPETENCIAS_MARGEM),
-por garantia.
+Devido ao volume (~10 mil arquivos, dezenas de GB), o PA é particionado por
+competência (ano-mês) em parquets individuais. O reprocessamento é incremental,
+afetando apenas as competências com novidades, mais uma margem de segurança.
 """
 import os
 import re
@@ -72,37 +37,16 @@ logger = logging.getLogger(__name__)
 
 
 def _ler_dbf_pa(caminho_dbf: str, chunksize: int = 250_000):
-    """Lê um .dbf do PA usando SOMENTE dbfread, em chunks de DataFrames (string).
+    """Lê .dbf do PA via dbfread em chunks de DataFrames (string).
 
-    Por que dbfread direto (sem simpledbf): os .dbf do PA -- sobretudo os
-    antigos -- têm uma variante de header que o simpledbf lê torto (nomes de
-    coluna com bytes \\x00 e ZERO registros, sem lançar erro). O dbfread lê os
-    mesmos arquivos corretamente. Como isso vale para o PA inteiro, usamos
-    dbfread direto aqui, eliminando a incerteza.
-
-    Parser TOLERANTE: os dados antigos do PA (ex.: 2000) têm SUJEIRA em campos
-    numéricos -- valores como b'"14.35' (com aspa) ou b'\\xa0 6.50' (espaço não
-    quebrável). O parser padrão do dbfread tenta converter para float e explode
-    (ValueError), fazendo a UF inteira ser (erroneamente) quarentenada. Como no
-    nosso pipeline tudo vira string mesmo, usamos um FieldParser que, se a
-    conversão numérica/data falhar, devolve o TEXTO CRU do campo em vez de
-    lançar erro. Nada de dado bom é perdido e nada é quarentenado à toa.
-
-    Normalizações (para casar com o resto do datalake):
-      - nomes de coluna: remove bytes \\x00 e espaços das bordas;
-      - valores: tudo string; vazios/None/espaços viram NaN.
+    Usa dbfread direto e um FieldParser customizado para contornar headers 
+    malformados e sujeira em campos numéricos (comuns em arquivos antigos) 
+    que causariam erros de conversão no parser padrão.
     """
     from dbfread import FieldParser
 
     class _ParserTolerante(FieldParser):
-        """Parser resiliente à sujeira dos dados antigos do PA.
-
-        Campos numéricos às vezes trazem lixo (aspas, \\xa0, espaços). O parser
-        padrão do dbfread lança ValueError e derruba a leitura da UF inteira.
-        Aqui: se o parse falhar, limpamos os caracteres-lixo conhecidos e
-        tentamos de novo; se ainda assim falhar, devolvemos o texto cru (nunca
-        levanta exceção). Como tudo vira string no pipeline, nada se perde.
-        """
+        """Parser resiliente: em caso de falha na conversão, limpa o texto ou devolve o dado cru (string)."""
         def parse(self, field, data):
             try:
                 return super().parse(field, data)
@@ -148,18 +92,14 @@ def _ler_dbf_pa(caminho_dbf: str, chunksize: int = 250_000):
 # prefixo dos arquivos de competência.
 NOME_FONTE = "producao_ambulatorial"
 
-# Quantas competências recentes reprocessar sempre, por garantia (revisões
-# silenciosas do DATASUS nos meses mais novos).
-COMPETENCIAS_MARGEM = 6
+# Quantidade de meses recentes a reprocessar sempre (default 0 confia na detecção por tamanho).
+# Reprocessar à toa custa ~1h/mês. Para forçar varredura no passado, use a env var 
+# (ex: PA_COMPETENCIAS_MARGEM=120 para os últimos 10 anos).
+COMPETENCIAS_MARGEM = int(os.environ.get("PA_COMPETENCIAS_MARGEM", "0"))
 
 
 def _competencia_de(nome_dbc: str) -> str | None:
-    """De 'PASP2401a.dbc' extrai a competência 'AAAAMM' = '202401'.
-
-    Formato dos arquivos PA: PA{UF}{AA}{MM}[parte].dbc, onde AA são os 2
-    últimos dígitos do ano (94-99 -> 1994-1999; 00-93 -> 2000-2093) e MM o mês.
-    Retorna None se o nome não casar com o padrão do PA.
-    """
+    """Extrai a competência AAAAMM de um nome no padrão PA (ex: PASP2401a.dbc -> 202401)."""
     m = re.match(r"^PA[A-Z]{2}(\d{2})(\d{2})", nome_dbc.upper())
     if not m:
         return None
@@ -185,14 +125,7 @@ def _competencias_afetadas(
     tamanhos_atuais: dict[str, int],
     manifesto: dict[str, int],
 ) -> set[str]:
-    """Decide quais competências reprocessar.
-
-    Uma competência é reprocessada se:
-      - alguma de suas partes .dbc é nova (não está no manifesto), OU
-      - alguma parte mudou de tamanho em relação ao manifesto, OU
-      - está entre as COMPETENCIAS_MARGEM competências mais recentes (margem
-        de segurança contra revisões silenciosas).
-    """
+    """Retorna competências com arquivos novos, alterados ou dentro da margem de segurança."""
     afetadas: set[str] = set()
 
     # 1) novidade/alteração por arquivo-fonte
@@ -204,9 +137,12 @@ def _competencias_afetadas(
                 break
 
     # 2) margem de segurança: N competências mais recentes presentes no disco
-    competencias_ordenadas = sorted(grupos.keys())  # AAAAMM ordena cronologicamente
-    margem = set(competencias_ordenadas[-COMPETENCIAS_MARGEM:])
-    afetadas |= margem
+    competencias_ordenadas = sorted(grupos.keys()) 
+
+    # Guard explícito, pois list[-0:] retorna a lista inteira (reprocessaria tudo)
+    if COMPETENCIAS_MARGEM > 0:
+        margem = set(competencias_ordenadas[-COMPETENCIAS_MARGEM:])
+        afetadas |= margem
 
     return afetadas
 
@@ -301,11 +237,6 @@ def _converter_competencia(
     return parquet_saida
 
 
-def processar_pa_particionado(dbc_dir: Path) -> int:
-    """Processa o PA em parquets por competência e publica na pasta dedicada.
-
-    Retorna exit code (SEM_NOVIDADE / ERRO / SUCESSO).
-    """
 def _competencias_no_filtro(
     competencias: list[str], filtro: dict | None
 ) -> list[str]:
@@ -338,17 +269,10 @@ def _competencias_no_filtro(
 
 
 def processar_pa_particionado(dbc_dir: Path, filtro: dict | None = None) -> int:
-    """Processa o PA em parquets por competência e publica na pasta dedicada.
+    """Processa o PA em parquets isolados por competência.
 
-    filtro (opcional) restringe QUAIS competências processar:
-      - None (padrão): modo INCREMENTAL. Processa o que é novo/alterado segundo
-        o manifesto + a margem de segurança de competências recentes. É o modo
-        das atualizações de rotina.
-      - dict (--ano/--competencia/--de-ate): modo BACKFILL EXPLÍCITO. Processa
-        exatamente a janela pedida, IGNORANDO o manifesto e SEM margem (você
-        está pedindo aquele período na marra; reprocessa mesmo se já existir).
-
-    Retorna exit code (SEM_NOVIDADE / ERRO / SUCESSO).
+    Se `filtro` for passado, executa Backfill explícito (ignora manifesto e margem).
+    Caso contrário, opera em modo Incremental (novidades + margem de segurança).
     """
     if not dbc_dir.exists():
         logger.info(f"{dbc_dir} não existe -- nada a processar.")
@@ -384,7 +308,7 @@ def processar_pa_particionado(dbc_dir: Path, filtro: dict | None = None) -> int:
             f"sem margem e ignorando o manifesto."
         )
     else:
-        # ---- MODO INCREMENTAL: novidades + margem de segurança
+        # MODO INCREMENTAL: novidades + margem de segurança
         afetadas = _competencias_afetadas(grupos, tamanhos_atuais, manifesto)
 
         novidade_real = any(
@@ -395,10 +319,12 @@ def processar_pa_particionado(dbc_dir: Path, filtro: dict | None = None) -> int:
             logger.info("[PA] Nenhuma competência nova ou alterada desde a última execução.")
             return exit_codes.SEM_NOVIDADE
 
+        _txt_margem = (f"inclui margem de {COMPETENCIAS_MARGEM} competência(s) recentes"
+                       if COMPETENCIAS_MARGEM > 0
+                       else "sem margem -- só competências novas/alteradas por tamanho")
         logger.info(
             f"[PA] Modo incremental: {len(grupos)} competências no disco; "
-            f"{len(afetadas)} serão (re)processadas "
-            f"(inclui margem de {COMPETENCIAS_MARGEM} competências recentes)."
+            f"{len(afetadas)} serão (re)processadas ({_txt_margem})."
         )
 
     temp_dir = dbc_dir / "temp_pa"
@@ -408,10 +334,7 @@ def processar_pa_particionado(dbc_dir: Path, filtro: dict | None = None) -> int:
     s3 = get_s3_client()
     houve_erro = False
 
-    # Checkpoint: a cada quantas competências o manifesto é salvo durante o loop.
-    # Sem isso, uma interrupção (Ctrl+C) antes do fim faria a próxima execução
-    # reprocessar tudo de novo -- os parquets já subiram, mas o manifesto não
-    # teria registrado. Não há perda de dado; o checkpoint evita RETRABALHO.
+    # Checkpoint periódico do manifesto evita retrabalho em caso de interrupção (Ctrl+C).
     CHECKPOINT_A_CADA = 10
     desde_ultimo_checkpoint = 0
 
