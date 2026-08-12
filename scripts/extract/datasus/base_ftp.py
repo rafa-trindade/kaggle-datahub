@@ -52,8 +52,7 @@ def get_tamanho_ftp(ftp: FTP, nome_arquivo: str) -> int | None:
 
 
 def _verificar_em_lote(ftp: FTP, arquivos: list[str], manifesto: dict | None) -> list[str]:
-    """Reaproveita a conexão FTP aberta para consultar o tamanho dos arquivos em lote, 
-    devolvendo apenas os que precisam de download (novos ou alterados em relação ao manifesto)."""
+    """Reaproveita a conexão FTP para checar tamanhos em lote, retornando apenas arquivos pendentes."""
     precisam_download = []
     ja_ok = 0
     for nome in arquivos:
@@ -78,18 +77,14 @@ def _verificar_em_lote(ftp: FTP, arquivos: list[str], manifesto: dict | None) ->
     return precisam_download
 
 def _backoff(attempt: int):
-    """Espera com backoff exponencial + jitter para evitar saturação do servidor."""
+    """Backoff exponencial com jitter, evita retries sincronizados."""
     espera = min(RETRY_DELAY * (2 ** attempt), 120) + random.uniform(0, 3)
     logger.info(f"Aguardando {espera:.1f}s antes de tentar de novo...")
     time.sleep(espera)
 
 def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
                     manifesto: dict[str, int] | None = None) -> tuple[bool, bool]:
-    """Retorna (sucesso, houve_novidade).
-
-    houve_novidade=False se completo localmente ou no manifesto.
-    manifesto evita re-baixar arquivos não modificados.
-    """
+    """Baixa o arquivo do FTP. Retorna (sucesso, houve_novidade), pulando re-downloads desnecessários."""
     local_path = os.path.join(pasta_saida, nome_arquivo)
     tamanho_ftp = None
 
@@ -152,7 +147,7 @@ def baixar_arquivo(ftp_dir: str, nome_arquivo: str, pasta_saida: str,
     return False, False
 
 def _chave_recencia(nome_arquivo: str) -> str:
-    """Extrai os dígitos da competência no final do nome para ordenação cronológica."""
+    """Extrai a competência (dígitos finais) do nome para ordenação cronológica correta."""
     m = re.search(r"(\d+)\.\w+$", nome_arquivo, re.IGNORECASE)
     return m.group(1) if m else nome_arquivo
 
@@ -172,7 +167,7 @@ def _deduplicar_case(nomes: list[str]) -> list[str]:
 
 def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str], bool],
                      pasta_bucket: str | None = None, verificar_ultimas_n_competencias: int = 2) -> tuple[bool, bool]:
-    """Lista e baixa arquivos FTP. Otimiza checando na rede apenas as N competências mais recentes."""
+    """Lista e baixa arquivos FTP, checando na rede apenas as novidades e as N competências recentes."""
     ensure_output_dir(output_dir)
     logger.info(f"Conectando a {FTP_HOST} ({ftp_dir}) para listar arquivos...")
     relevantes = []
@@ -207,7 +202,7 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
 
                 print(f"Sucesso ao listar! {len(relevantes)} arquivos passaram no filtro.")
 
-                # Pula antigas do manifesto (sem bater na rede) e valida as recentes em lote (1 conexão).
+                # Pula arquivos antigos validados no manifesto e verifica as competências recentes em lote.
                 if manifesto is not None and relevantes:
                     competencias_distintas = sorted(set(_chave_recencia(arq) for arq in relevantes))
                     competencias_recentes = set(competencias_distintas[-verificar_ultimas_n_competencias:])
@@ -225,7 +220,6 @@ def sincronizar_ftp(ftp_dir: str, output_dir: str, regra_filtro: Callable[[str],
                         print(f"[OTIMIZAÇÃO] {pulados_sem_rede} arquivo(s) de competência(s) antiga(s) já "
                               f"confirmado(s) no manifesto -- pulando verificação de rede.")
 
-                    # verificação em lote na conexão aberta -> só o que mudou vai p/ download
                     a_verificar = _verificar_em_lote(ftp, candidatos, manifesto)
                 break
 
