@@ -9,8 +9,6 @@ from botocore.exceptions import ClientError
 from scripts.common.paths import BASE_DIR, PUBLISH_CACHE_DIR
 from scripts.common import env
 
-# Kaggle usa tempfile.mkdtemp() internamente (respeita TEMP/TMP, não .env)
-# Necessário pra evitar encher disco C: com zips grandes
 _temp_dir_kaggle = PUBLISH_CACHE_DIR.parent / "_temp_zip"
 _temp_dir_kaggle.mkdir(parents=True, exist_ok=True)
 os.environ['TEMP'] = str(_temp_dir_kaggle)
@@ -43,7 +41,9 @@ MINIO_ACCESS_KEY = env.MINIO_ROOT_USER
 MINIO_SECRET_KEY = env.MINIO_ROOT_PASSWORD
 MINIO_BUCKET = env.MINIO_BUCKET
 
-FILES_TO_IGNORE = {'.gitkeep', 'raw_lake_metadados.csv'}
+FILES_TO_IGNORE = {'.gitkeep'}
+
+SEMPRE_ATUALIZAR = {"datahub-metadados.csv", "datahub-pa-metadados.csv"}
 
 # ---------------------------------------------------------------------------
 # Roteamento de datasets
@@ -158,7 +158,8 @@ def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path,
     reaproveitados = 0
     for rel, (s3_key, tamanho_remoto) in mapa_local.items():
         destino = cache_dir / rel
-        if destino.exists() and destino.stat().st_size == tamanho_remoto:
+        inalterado = destino.exists() and destino.stat().st_size == tamanho_remoto
+        if inalterado and destino.name not in SEMPRE_ATUALIZAR:
             reaproveitados += 1
             continue
         destino.parent.mkdir(parents=True, exist_ok=True)
@@ -258,11 +259,7 @@ def _preparar_metadata(api, dataset_id: str, titulo: str, cache_dir: Path,
 def _publicar_dataset(api, s3_client, *, qual: str, dataset_slug: str, titulo: str,
                       objetos_do_dataset: dict, cache_dir: Path, kaggle_user: str,
                       forcar: bool = False):
-    """Sincroniza cache + publica UM dataset (só os seus arquivos).
 
-    forcar=True republica mesmo sem mudanças detectadas (útil se o cache já
-    está sincronizado mas a última publicação ao Kaggle falhou).
-    """
     dataset_id = f"{kaggle_user}/{dataset_slug}"
     logger.info(f"===== Publicando dataset: {dataset_id} =====")
 
@@ -385,8 +382,7 @@ def load_lake_to_kaggle(alvo: str = "ambos", forcar: bool = False):
     cache_principal = PUBLISH_CACHE_DIR / "principal"
     cache_pa = PUBLISH_CACHE_DIR / "pa"
 
-    # Migração única do cache antigo (layout achatado) -> principal/.
-    # (só faz sentido quando o principal está no escopo desta execução)
+
     if alvo in ("ambos", "principal"):
         _migrar_cache_antigo_para_principal(cache_principal)
 
