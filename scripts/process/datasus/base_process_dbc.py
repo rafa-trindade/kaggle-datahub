@@ -140,6 +140,13 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     temp_dir = dbc_dir / "temp_parquets"
     temp_dir.mkdir(exist_ok=True)
 
+    # ================= LIMPEZA DE LIXO =================
+    # Apaga resquícios de execuções que foram interrompidas
+    for lixo in dbc_dir.rglob("*.DBF"): _remover_seguro(str(lixo))
+    for lixo in dbc_dir.rglob("*.dbf"): _remover_seguro(str(lixo))
+    for lixo in temp_dir.rglob("*.tmp"): _remover_seguro(str(lixo))
+    # ===================================================
+
     # ---------------------------------------------------------
     # # Fase 1: DBC -> DBF -> Parquets intermediários (em lotes)
     # ---------------------------------------------------------
@@ -149,25 +156,32 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
     for idx, arquivo in enumerate(arquivos_dbc, 1):
         caminho_dbc = str(dbc_dir / arquivo)
         caminho_dbf = caminho_dbc.replace(".DBC", ".DBF").replace(".dbc", ".dbf")
-        caminho_parquet_temp = str(temp_dir / arquivo.replace(".dbc", ".parquet").replace(".DBC", ".parquet"))
         
-        if os.path.exists(caminho_parquet_temp):
-            parquets_gerados.append(caminho_parquet_temp)
-            logger.info(f"[{idx}/{len(arquivos_dbc)}] [SKIP] {arquivo} (Parquet temp já existe)")
+        # Define o nome final esperado e o nome temporário de trabalho
+        caminho_parquet_final = str(temp_dir / arquivo.replace(".dbc", ".parquet").replace(".DBC", ".parquet"))
+        caminho_parquet_trabalho = caminho_parquet_final + ".tmp"
+        
+        # Só dá SKIP se o arquivo FINAL existir (sinal de que terminou com sucesso antes)
+        if os.path.exists(caminho_parquet_final):
+            parquets_gerados.append(caminho_parquet_final)
+            logger.info(f"[{idx}/{len(arquivos_dbc)}] [SKIP] {arquivo} (Parquet já existe e está íntegro)")
             continue
             
         logger.info(f"[{idx}/{len(arquivos_dbc)}] Convertendo {arquivo}...")
         parquet_writer = None
         try:
+            _remover_seguro(caminho_parquet_trabalho) # Garante que o temp está zerado
+            
             if os.path.exists(caminho_dbf): os.remove(caminho_dbf)
             datasus_dbc.decompress(caminho_dbc, caminho_dbf)
 
             for df_chunk in _iter_chunks_dbf(caminho_dbf, arquivo, chunksize=250_000):
-                df_chunk["_ARQUIVO_ORIGEM"] = arquivo   # rastrear origem para merge incremental
+                df_chunk["_ARQUIVO_ORIGEM"] = arquivo   
                 table = pa.Table.from_pandas(df_chunk)
 
                 if parquet_writer is None:
-                    parquet_writer = pq.ParquetWriter(caminho_parquet_temp, table.schema)
+                    # GRAVA NO ARQUIVO DE TRABALHO (.tmp)
+                    parquet_writer = pq.ParquetWriter(caminho_parquet_trabalho, table.schema)
 
                 parquet_writer.write_table(table)
 
@@ -178,7 +192,10 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
             if parquet_writer:
                 parquet_writer.close()
 
-            parquets_gerados.append(caminho_parquet_temp)
+            # GRAVAÇÃO ATÔMICA: Se chegou aqui sem dar erro, renomeia o .tmp para o nome final
+            os.rename(caminho_parquet_trabalho, caminho_parquet_final)
+
+            parquets_gerados.append(caminho_parquet_final)
             _remover_seguro(caminho_dbf)
             _remover_seguro(caminho_dbc)
 
@@ -190,7 +207,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
             except (ValueError, OSError):
                 pass
             _remover_seguro(caminho_dbf)
-            _remover_seguro(caminho_parquet_temp)  # parquet meio-escrito, se houver
+            _remover_seguro(caminho_parquet_trabalho)
             if os.path.exists(caminho_dbc):
                 _quarentena(dbc_dir, caminho_dbc, arquivo)
             continue
@@ -245,6 +262,14 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
     """Processa novos .dbc e usa DuckDB para mesclá-los ao Parquet já publicado, atualizando revisões."""
     from scripts.common.bucket_sync import get_s3_client, upload_and_cleanup
     from scripts.common import env
+
+    # ================= LIMPEZA INICIAL DE LIXO =================
+    # Garante que não vamos usar parquets corrompidos pelo DuckDB de falhas passadas
+    for lixo_file in ["_novos_temp.parquet", "_existente_temp.parquet", nome_arquivo_final]:
+        arquivo_lixo = dbc_dir / lixo_file
+        if arquivo_lixo.exists():
+            arquivo_lixo.unlink(missing_ok=True)
+    # ===========================================================
 
     s3_key = f"{pasta_bucket}/{nome_arquivo_final}"
 
