@@ -267,7 +267,7 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
 
 def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arquivo_final: str) -> bool:
     """Processa novos .dbc e usa DuckDB para mesclá-los ao Parquet já publicado, atualizando revisões."""
-    from scripts.common.bucket_sync import get_s3_client, upload_and_cleanup
+    from scripts.common.bucket_sync import upload_and_cleanup, obter_publicado, eh_copia_temporaria
     from scripts.common import env
 
     # ================= LIMPEZA INICIAL DE LIXO =================
@@ -292,13 +292,12 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
         return False
 
     caminho_existente_temp = dbc_dir / "_existente_temp.parquet"
-    tem_existente = False
-    s3 = get_s3_client()
-    try:
-        s3.download_file(env.MINIO_BUCKET, s3_key, str(caminho_existente_temp))
-        tem_existente = True
+    # minio: baixa uma cópia; local: lê o próprio arquivo publicado (sem copiar)
+    caminho_existente = obter_publicado(s3_key, caminho_existente_temp)
+    tem_existente = caminho_existente is not None
+    if tem_existente:
         logger.info(f"Parquet já publicado encontrado em {s3_key} -- mesclando com os arquivos novos.")
-    except Exception:
+    else:
         logger.info(f"Nada publicado ainda em {s3_key} -- esta é a primeira publicação.")
 
     caminho_final_temp = dbc_dir / nome_arquivo_final
@@ -315,7 +314,7 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
             lista_nomes = ", ".join(f"'{n}'" for n in nomes_novos)
             query = f"""
                 COPY (
-                    SELECT * FROM read_parquet('{caminho_existente_temp}')
+                    SELECT * FROM read_parquet('{caminho_existente}')
                     WHERE _ARQUIVO_ORIGEM NOT IN ({lista_nomes})
                     UNION ALL BY NAME
                     SELECT * FROM read_parquet('{parquet_novos_temp}')
@@ -336,7 +335,7 @@ def processar_e_publicar_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqu
         con.close()
 
     parquet_novos_temp.unlink(missing_ok=True)
-    if tem_existente:
+    if eh_copia_temporaria(caminho_existente, caminho_existente_temp):
         caminho_existente_temp.unlink(missing_ok=True)
 
     return upload_and_cleanup(caminho_final_temp, s3_key)

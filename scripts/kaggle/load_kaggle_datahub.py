@@ -198,6 +198,39 @@ def _sincronizar_cache(s3_client, objetos_do_dataset: dict, cache_dir: Path,
     return baixados, removidos
 
 
+def _novidades_lake_local(cache_dir: Path) -> tuple[int, int]:
+    """Modo local: em vez de sincronizar com o MinIO, conta quantos arquivos
+    da pasta mudaram desde a última publicação confirmada no Kaggle.
+
+    Devolve (alterados, 0) -- mesmo formato de _sincronizar_cache."""
+    from scripts.common.armazenamento_local import limpar_parciais
+
+    sobras = limpar_parciais(cache_dir)
+    if sobras:
+        logger.info(f"Removida(s) {sobras} sobra(s) de gravação interrompida (*.partial).")
+
+    marcador = cache_dir / ".ultima_publicacao_sucesso"
+    controle = {"dataset-metadata.json", ".ultima_publicacao_sucesso"}
+    # os CSVs de metadados são regenerados a cada execução; sozinhos não
+    # significam dado novo
+    ignorar_como_gatilho = controle | SEMPRE_ATUALIZAR
+
+    arquivos = [p for p in cache_dir.rglob("*") if p.is_file() and p.name not in controle]
+    if not marcador.exists():
+        logger.info(f"Lake local: {len(arquivos)} arquivo(s); sem publicação anterior confirmada.")
+        return len(arquivos), 0
+
+    referencia = marcador.stat().st_mtime
+    alterados = [p for p in arquivos
+                 if p.name not in ignorar_como_gatilho and p.stat().st_mtime > referencia]
+    for p in alterados[:20]:
+        logger.info(f"   alterado desde a última publicação: {p.relative_to(cache_dir).as_posix()}")
+    if len(alterados) > 20:
+        logger.info(f"   ... e mais {len(alterados) - 20}")
+    logger.info(f"✔ Lake local: {len(alterados)} arquivo(s) alterado(s) desde a última publicação.")
+    return len(alterados), 0
+
+
 def _preparar_metadata(api, dataset_id: str, titulo: str, cache_dir: Path,
                        qual: str, kaggle_user: str):
     """Prepara dataset-metadata.json preservando descrição/tags manuais e retorna se o dataset existe (bool)."""
@@ -269,10 +302,13 @@ def _publicar_dataset(api, s3_client, *, qual: str, dataset_slug: str, titulo: s
 
     logger.info(f"Cache: {cache_dir} ({len(objetos_do_dataset)} arquivo(s) esperado(s))")
 
-    baixados, removidos = _sincronizar_cache(
-        s3_client, objetos_do_dataset, cache_dir,
-        reorganizar_pa=(qual == "pa"),
-    )
+    if env.MODO_LOCAL:
+        baixados, removidos = _novidades_lake_local(cache_dir)
+    else:
+        baixados, removidos = _sincronizar_cache(
+            s3_client, objetos_do_dataset, cache_dir,
+            reorganizar_pa=(qual == "pa"),
+        )
 
     marcador_sucesso = cache_dir / ".ultima_publicacao_sucesso"
     if (baixados > 0 or removidos > 0) and marcador_sucesso.exists():
@@ -358,18 +394,28 @@ def load_lake_to_kaggle(alvo: str = "ambos", forcar: bool = False):
     api.authenticate()
     kaggle_user = api.get_config_value('username')
 
-    logger.info(f"Conectando ao Data Lake (MinIO) no bucket: {MINIO_BUCKET}")
-    s3_client = criar_s3_client()
+    if env.MODO_LOCAL:
+        # Lake local: a pasta de publicação JÁ é o lake -- nada a baixar.
+        from scripts.common.armazenamento_local import listar_chaves
+        logger.info(f"Lake LOCAL (DATAHUB_STORAGE=local): {PUBLISH_CACHE_DIR}")
+        s3_client = None
+        objetos_s3 = {k: p.stat().st_size for k, p in listar_chaves().items()}
+        if not objetos_s3:
+            logger.warning(f"Nenhum arquivo no lake local ({PUBLISH_CACHE_DIR}). Encerrando.")
+            return
+    else:
+        logger.info(f"Conectando ao Data Lake (MinIO) no bucket: {MINIO_BUCKET}")
+        s3_client = criar_s3_client()
 
-    try:
-        objetos_s3 = _listar_objetos_bucket(s3_client)
-    except ClientError as e:
-        logger.error(f"Erro ao acessar o MinIO: {e}")
-        return
+        try:
+            objetos_s3 = _listar_objetos_bucket(s3_client)
+        except ClientError as e:
+            logger.error(f"Erro ao acessar o MinIO: {e}")
+            return
 
-    if not objetos_s3:
-        logger.warning(f"Nenhum arquivo encontrado no bucket {MINIO_BUCKET}. Encerrando.")
-        return
+        if not objetos_s3:
+            logger.warning(f"Nenhum arquivo encontrado no bucket {MINIO_BUCKET}. Encerrando.")
+            return
 
     # Particiona os objetos do bucket entre os dois datasets por prefixo.
     objetos_pa = {k: v for k, v in objetos_s3.items() if k.startswith(PREFIXO_PA)}

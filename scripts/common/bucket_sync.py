@@ -1,6 +1,12 @@
 """
-Verificação de novidade contra o BUCKET (MinIO/S3), não contra disco local.
-O bucket é a fonte de verdade sobre "arquivo já existe".
+Verificação de novidade contra o LAKE, não contra a landing.
+O lake é a fonte de verdade sobre "arquivo já existe".
+
+O lake pode ser (DATAHUB_STORAGE no .env):
+  - "minio": bucket S3/MinIO (padrão);
+  - "local": a própria pasta de publicação do Kaggle
+    (ver scripts/common/armazenamento_local.py).
+Os scripts das fontes não precisam saber qual: usam as funções abaixo.
 
 Uso básico:
   - Checar se existe: already_in_bucket(s3_key, tamanho_esperado)
@@ -37,6 +43,12 @@ def get_s3_client():
     if _client is not None:
         return _client
 
+    if env.MODO_LOCAL:
+        from scripts.common.armazenamento_local import ArmazenamentoLocal
+        _client = ArmazenamentoLocal()
+        _client.head_bucket()
+        return _client
+
     cliente = boto3.client(
         "s3",
         endpoint_url=env.MINIO_ENDPOINT,
@@ -64,7 +76,11 @@ def get_s3_client():
 
 
 def _tamanho_remoto(s3_key: str) -> int | None:
-    """Tamanho do objeto no bucket, ou None se não existir."""
+    """Tamanho do objeto no lake, ou None se não existir."""
+    if env.MODO_LOCAL:
+        from scripts.common.armazenamento_local import caminho_local
+        p = caminho_local(s3_key)
+        return p.stat().st_size if p.is_file() else None
     s3 = get_s3_client()
     try:
         resposta = s3.head_object(Bucket=env.MINIO_BUCKET, Key=s3_key)
@@ -77,6 +93,10 @@ def _tamanho_remoto(s3_key: str) -> int | None:
 
 def _hash_remoto_md5(s3_key: str) -> str | None:
     """ETag do objeto (MD5 confiável apenas para uploads simples, não multipart)."""
+    if env.MODO_LOCAL:
+        from scripts.common.armazenamento_local import caminho_local
+        p = caminho_local(s3_key)
+        return _hash_local_md5(p) if p.is_file() else None
     s3 = get_s3_client()
     try:
         resposta = s3.head_object(Bucket=env.MINIO_BUCKET, Key=s3_key)
@@ -119,7 +139,24 @@ def already_in_bucket(s3_key: str, tamanho_local_esperado: int | None = None,
 
 
 def upload_and_cleanup(caminho_local: Path, s3_key: str, apagar_local: bool = True) -> bool:
-    """Sobe para bucket e apaga local. Padrão do projeto: nada fica em disco."""
+    """Sobe para o lake e apaga local. Padrão do projeto: nada fica na landing.
+
+    No modo local, MOVE o arquivo para a pasta de publicação (sem cópia,
+    quando estão no mesmo disco), substituindo o publicado só no fim."""
+    if env.MODO_LOCAL:
+        from scripts.common.armazenamento_local import gravar_atomico_movendo, gravar_atomico_copiando
+        try:
+            if apagar_local:
+                destino = gravar_atomico_movendo(Path(caminho_local), s3_key)
+            else:
+                destino = gravar_atomico_copiando(Path(caminho_local), s3_key)
+            logger.info(f"[LAKE LOCAL] {s3_key} -> {destino}")
+            return True
+        except Exception as e:
+            logger.error(f"[ERRO LAKE LOCAL] '{s3_key}': {e}")
+            print(f"[ERRO LAKE LOCAL] '{s3_key}': {e} -- o arquivo foi mantido em {caminho_local}", flush=True)
+            return False
+
     s3 = get_s3_client()
     logger.info(f"[UPLOAD] Enviando {s3_key} ...")
     # Queda de conexão (ex.: túnel SSH caiu) -> espera e tenta de novo por
@@ -186,3 +223,26 @@ def salvar_manifesto(pasta_bucket: str, manifesto: dict[str, int]):
         ContentType="application/json",
     )
     logger.info(f"[MANIFESTO] {chave} atualizado ({len(manifesto)} arquivo(s) registrados).")
+
+def obter_publicado(s3_key: str, destino_temp: Path) -> Path | None:
+    """Caminho legível do arquivo já publicado (para mesclagem incremental),
+    ou None se ainda não existe.
+
+    - minio: baixa para `destino_temp` e devolve `destino_temp`;
+    - local: devolve o próprio arquivo publicado, SEM copiar (o chamador só
+      lê; a substituição acontece depois, via upload_and_cleanup).
+    Use `eh_copia_temporaria()` para saber se pode apagar o retorno."""
+    if env.MODO_LOCAL:
+        from scripts.common.armazenamento_local import caminho_local
+        p = caminho_local(s3_key)
+        return p if p.is_file() else None
+    try:
+        get_s3_client().download_file(env.MINIO_BUCKET, s3_key, str(destino_temp))
+        return Path(destino_temp)
+    except Exception:
+        return None
+
+
+def eh_copia_temporaria(caminho: Path | None, destino_temp: Path) -> bool:
+    """True se `caminho` (retorno de obter_publicado) é uma cópia que pode ser apagada."""
+    return caminho is not None and Path(caminho) == Path(destino_temp)

@@ -16,3 +16,9 @@ MINIO_BUCKET = os.environ.get("MINIO_BUCKET")
 
 KAGGLE_DIR = BASE_DIR / ".kaggle"
 KAGGLE_JSON = KAGGLE_DIR / "kaggle.json"
+# Onde fica o "lake": "minio" (bucket S3/MinIO, padrão) ou "local" (a própria
+# pasta de publicação do Kaggle, KAGGLE_DATAHUB_PUBLISH_CACHE_DIR).
+DATAHUB_STORAGE = os.environ.get("DATAHUB_STORAGE", "minio").strip().lower()
+if DATAHUB_STORAGE not in ("minio", "local"):
+    raise ValueError(f"DATAHUB_STORAGE inválido: '{DATAHUB_STORAGE}' (use 'minio' ou 'local').")
+MODO_LOCAL = DATAHUB_STORAGE == "local"

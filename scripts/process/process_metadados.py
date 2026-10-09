@@ -111,7 +111,9 @@ def _obter_metadados_fonte(pasta: str, nome_arquivo: str) -> tuple[str, str]:
     return "(não mapeado no registro)", "(não mapeado no registro)"
 
 
-def _montar_s3_filesystem() -> pafs.S3FileSystem:
+def _montar_s3_filesystem() -> "pafs.S3FileSystem | None":
+    if env.MODO_LOCAL:
+        return None  # lake local: os parquets são lidos direto do disco
     endpoint_sem_protocolo = env.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
     esquema = "https" if env.MINIO_ENDPOINT.startswith("https://") else "http"
     return pafs.S3FileSystem(
@@ -122,8 +124,12 @@ def _montar_s3_filesystem() -> pafs.S3FileSystem:
     )
 
 
-def _contar_registros_parquet(s3_fs: pafs.S3FileSystem, bucket: str, key: str) -> int | None:
+def _contar_registros_parquet(s3_fs, bucket: str, key: str) -> int | None:
     try:
+        if env.MODO_LOCAL:
+            from scripts.common.armazenamento_local import caminho_local
+            pf = pq.ParquetFile(str(caminho_local(key)))
+            return pf.metadata.num_rows
         caminho_s3 = f"{bucket}/{key}"
         pf = pq.ParquetFile(caminho_s3, filesystem=s3_fs)
         return pf.metadata.num_rows

@@ -99,10 +99,7 @@ def converter_arquivo(con, origem: Path, destino: Path) -> int:
 
 
 def processar_era(con, nome_era: str) -> int:
-    from scripts.common.bucket_sync import (
-        get_s3_client, upload_and_cleanup, carregar_manifesto, salvar_manifesto,
-    )
-    from scripts.common import env
+    from scripts.common.bucket_sync import obter_publicado
 
     dir_era = LANDING_SRAG / nome_era
     arquivos = sorted(p for p in dir_era.glob("INFLUD*") if p.suffix.lower() in (".parquet", ".csv"))
@@ -140,13 +137,12 @@ def processar_era(con, nome_era: str) -> int:
         print(f"   {p.name}: {n} registros ({time.time() - inicio:.0f}s)", flush=True)
 
     # 2) mesclagem com o publicado
-    existente = temp_dir / "_existente.parquet"
-    tem_existente = False
-    try:
-        get_s3_client().download_file(env.MINIO_BUCKET, s3_key, str(existente))
-        tem_existente = True
+    # minio: baixa uma cópia para temp_dir; local: lê o próprio publicado
+    existente = obter_publicado(s3_key, temp_dir / "_existente.parquet")
+    tem_existente = existente is not None
+    if tem_existente:
         print(f"Parquet publicado encontrado em {s3_key} -- mesclando.")
-    except Exception:
+    else:
         print(f"Nada publicado ainda em {s3_key} -- primeira publicação.")
 
     novos_glob = _sql(temp_dir / "INFLUD*.parquet")

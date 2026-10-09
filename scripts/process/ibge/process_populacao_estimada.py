@@ -8,7 +8,7 @@ import pandas as pd
 
 from scripts.common.paths import LANDING_DIR
 from scripts.common import exit_codes
-from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto, get_s3_client, upload_and_cleanup
+from scripts.common.bucket_sync import carregar_manifesto, salvar_manifesto, upload_and_cleanup, obter_publicado, eh_copia_temporaria
 from scripts.common import env
 
 JSON_DIR = LANDING_DIR / "json_ibge_populacao"
@@ -53,19 +53,18 @@ def main():
     print(f"Anos novos/alterados processados: {sorted(anos_novos)} ({len(df_novos)} linhas no total).")
 
     s3_key = f"{PASTA_BUCKET}/{NOME_ARQUIVO_FINAL}"
-    s3 = get_s3_client()
     caminho_existente_temp = JSON_DIR / "_existente_temp.parquet"
     caminho_novos_temp = JSON_DIR / "_novos_temp.parquet"
     caminho_final_temp = JSON_DIR / NOME_ARQUIVO_FINAL
 
     df_novos.to_parquet(caminho_novos_temp, index=False)
 
-    tem_existente = False
-    try:
-        s3.download_file(env.MINIO_BUCKET, s3_key, str(caminho_existente_temp))
-        tem_existente = True
+    # minio: baixa uma cópia; local: lê o próprio arquivo publicado (sem copiar)
+    caminho_existente = obter_publicado(s3_key, caminho_existente_temp)
+    tem_existente = caminho_existente is not None
+    if tem_existente:
         print(f"Parquet já publicado encontrado -- mesclando (removendo anos {sorted(anos_novos)} da versão antiga antes de adicionar a nova).")
-    except Exception:
+    else:
         print("Nada publicado ainda -- esta é a primeira publicação.")
 
     con = duckdb.connect()
@@ -73,7 +72,7 @@ def main():
         anos_lista = ", ".join(str(a) for a in anos_novos)
         query = f"""
             COPY (
-                SELECT * FROM read_parquet('{caminho_existente_temp}')
+                SELECT * FROM read_parquet('{caminho_existente}')
                 WHERE ANO NOT IN ({anos_lista})
                 UNION ALL BY NAME
                 SELECT * FROM read_parquet('{caminho_novos_temp}')
@@ -87,7 +86,7 @@ def main():
     print(f"✔ {contagem} registros no Parquet final mesclado.")
 
     caminho_novos_temp.unlink(missing_ok=True)
-    if tem_existente:
+    if eh_copia_temporaria(caminho_existente, caminho_existente_temp):
         caminho_existente_temp.unlink(missing_ok=True)
 
     sucesso = upload_and_cleanup(caminho_final_temp, s3_key)
