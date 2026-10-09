@@ -11,8 +11,10 @@ import json
 import logging
 from pathlib import Path
 
+import time
+
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, EndpointConnectionError, ConnectionClosedError
 
 from scripts.common import env
 
@@ -20,23 +22,44 @@ logger = logging.getLogger(__name__)
 
 _client = None
 
+# Espera (em segundos) entre tentativas de alcançar o MinIO -- cobre quedas
+# curtas do túnel SSH sem derrubar uma execução longa (~6 min no total).
+ESPERAS_RECONEXAO_MINIO = [10, 20, 30, 60, 60, 60, 60, 60]
+
 
 def get_s3_client():
     """Client S3 compartilhado (lazy, uma única conexão reaproveitada
-    em todas as chamadas do processo)."""
+    em todas as chamadas do processo).
+
+    Se o MinIO não responder (ex.: túnel caiu), tenta de novo por alguns
+    minutos antes de desistir, para dar tempo de o túnel voltar."""
     global _client
-    if _client is None:
-        _client = boto3.client(
-            "s3",
-            endpoint_url=env.MINIO_ENDPOINT,
-            aws_access_key_id=env.MINIO_ROOT_USER,
-            aws_secret_access_key=env.MINIO_ROOT_PASSWORD,
-        )
+    if _client is not None:
+        return _client
+
+    cliente = boto3.client(
+        "s3",
+        endpoint_url=env.MINIO_ENDPOINT,
+        aws_access_key_id=env.MINIO_ROOT_USER,
+        aws_secret_access_key=env.MINIO_ROOT_PASSWORD,
+    )
+    for tentativa, espera in enumerate([0] + ESPERAS_RECONEXAO_MINIO):
+        if espera:
+            print(f"[MINIO] {env.MINIO_ENDPOINT} inacessível (túnel caiu?). "
+                  f"Nova tentativa em {espera}s ({tentativa}/{len(ESPERAS_RECONEXAO_MINIO)})...", flush=True)
+            time.sleep(espera)
         try:
-            _client.head_bucket(Bucket=env.MINIO_BUCKET)
+            cliente.head_bucket(Bucket=env.MINIO_BUCKET)
+            break
+        except (EndpointConnectionError, ConnectionClosedError):
+            if tentativa == len(ESPERAS_RECONEXAO_MINIO):
+                raise
         except ClientError:
             logger.info(f"Bucket '{env.MINIO_BUCKET}' não encontrado. Criando...")
-            _client.create_bucket(Bucket=env.MINIO_BUCKET)
+            cliente.create_bucket(Bucket=env.MINIO_BUCKET)
+            break
+
+    _client = cliente
     return _client
 
 
@@ -99,12 +122,27 @@ def upload_and_cleanup(caminho_local: Path, s3_key: str, apagar_local: bool = Tr
     """Sobe para bucket e apaga local. Padrão do projeto: nada fica em disco."""
     s3 = get_s3_client()
     logger.info(f"[UPLOAD] Enviando {s3_key} ...")
-    try:
-        s3.upload_file(str(caminho_local), env.MINIO_BUCKET, s3_key)
-        logger.info(f"[UPLOAD OK] {s3_key}")
-    except Exception as e:
-        logger.error(f"[ERRO UPLOAD] '{s3_key}': {e}")
-        return False
+    # Queda de conexão (ex.: túnel SSH caiu) -> espera e tenta de novo por
+    # alguns minutos, em vez de perder um arquivo que pode ter levado horas
+    # para ser gerado. Outros erros (permissão, bucket etc.) falham na hora.
+    for tentativa, espera in enumerate([0] + ESPERAS_RECONEXAO_MINIO):
+        if espera:
+            print(f"[MINIO] upload de {s3_key} falhou por conexão (túnel caiu?). "
+                  f"Nova tentativa em {espera}s ({tentativa}/{len(ESPERAS_RECONEXAO_MINIO)})...", flush=True)
+            time.sleep(espera)
+        try:
+            s3.upload_file(str(caminho_local), env.MINIO_BUCKET, s3_key)
+            logger.info(f"[UPLOAD OK] {s3_key}")
+            break
+        except Exception as e:
+            erro_de_conexao = isinstance(e, (EndpointConnectionError, ConnectionClosedError)) or \
+                isinstance(getattr(e, "last_exception", None), (EndpointConnectionError, ConnectionClosedError)) or \
+                "Could not connect to the endpoint" in str(e)
+            if erro_de_conexao and tentativa < len(ESPERAS_RECONEXAO_MINIO):
+                continue
+            logger.error(f"[ERRO UPLOAD] '{s3_key}': {e}")
+            print(f"[ERRO UPLOAD] '{s3_key}': {e} -- o arquivo local foi mantido em {caminho_local}", flush=True)
+            return False
 
     if apagar_local:
         try:

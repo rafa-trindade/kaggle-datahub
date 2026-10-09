@@ -9,6 +9,7 @@ from scripts.common.paths import BASE_DIR
 from scripts.common import env
 from scripts.common.bucket_sync import get_s3_client
 from scripts.config.fontes import FONTES
+from scripts.config.bases_ans import get_base_ans_por_arquivo
 
 NOME_ARQUIVO_SAIDA = "datahub-metadados.csv"
 CAMINHO_LOCAL_PERSISTENTE = BASE_DIR / "docs" / NOME_ARQUIVO_SAIDA
@@ -29,7 +30,12 @@ MAPEAMENTO_ARQUIVO_ID = {
     "leitos": "cnes_leitos",
     "profissionais": "cnes_profissionais",
     "equipamentos": "cnes_equipamentos",
-    
+    "servicos_especializados": "cnes_servicos_especializados",
+    "equipes": "cnes_equipes",
+
+    # SRAG (srag_2009_2012, srag_2013_2018, srag_2019_atual)
+    "srag_": "srag",
+
     # SIM 
     "causas_externas_cid10": "sim_causas_externas_cid10",
     "causas_externas_cid9": "sim_causas_externas_cid9",
@@ -82,8 +88,16 @@ FUSO_BR = datetime.timezone(datetime.timedelta(hours=-3))
 
 def _obter_metadados_fonte(pasta: str, nome_arquivo: str) -> tuple[str, str]:
     """Acha o nome e a descrição da fonte cruzando o nome do arquivo com o ID."""
-    
-    for trecho, fonte_id in MAPEAMENTO_ARQUIVO_ID.items():
+
+    # ANS: cada tabela tem nome/descrição próprios em bases_ans.py
+    if pasta == "ans":
+        base = get_base_ans_por_arquivo(nome_arquivo)
+        if base:
+            return base.nome, base.descricao
+
+    # Trecho mais longo primeiro: evita que "profissionais" (CNES) capture
+    # "servicos_profissionais" (SIH), por exemplo.
+    for trecho, fonte_id in sorted(MAPEAMENTO_ARQUIVO_ID.items(), key=lambda kv: -len(kv[0])):
         if trecho in nome_arquivo:
             fonte = FONTE_POR_ID.get(fonte_id)
             if fonte:

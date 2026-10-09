@@ -2,7 +2,7 @@
 Baixa bases específicas (ou todas) dos datasets do DataHub Brasil no Kaggle.
 
 Dois datasets são suportados:
-  - principal : rafatrindade/brazilian-kaggle-datahub   (SIM, SINASC, CNES, SIH, SIA-APACs, CIHA, SINAN, IBGE, PNS...)
+  - principal : rafatrindade/brazilian-kaggle-datahub   (SIM, SINASC, CNES, SIH, SIA-APACs, CIHA, SINAN, SRAG, ANS, IBGE, PNS...)
   - pa        : rafatrindade/sia-producao-ambulatorial  (Produção Ambulatorial, particionada por competência)
 
 Configure a seção "CONFIGURAÇÃO" abaixo e rode:

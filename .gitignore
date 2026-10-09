@@ -26,6 +26,7 @@ dbt/logs/
 *.csv
 .xls
 *.ps1
+*.zip
 
 !docs/datahub-metadados.csv
 !docs/datahub-pa-metadados.csv

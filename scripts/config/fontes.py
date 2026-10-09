@@ -73,6 +73,24 @@ FONTES: list[Fonte] = [
         extract_modules=["scripts.extract.datasus.fetch_cnes_equipamentos"],
         process_modules=["scripts.process.datasus.process_cnes_equipamentos"],
     ),
+    Fonte(
+        id="cnes_servicos_especializados",
+        nome="CNES - Serviços Especializados",
+        descricao="Serviços especializados e classificações oferecidos por estabelecimento (ex.: oncologia, nefrologia, reabilitação), com indicação de atendimento SUS/não-SUS.",
+        tipo="pipeline",
+        pasta_bucket="cnes",
+        extract_modules=["scripts.extract.datasus.fetch_cnes_servicos_especializados"],
+        process_modules=["scripts.process.datasus.process_cnes_servicos_especializados"],
+    ),
+    Fonte(
+        id="cnes_equipes",
+        nome="CNES - Equipes de Saúde",
+        descricao="Equipes de saúde cadastradas por estabelecimento (Saúde da Família, Atenção Primária, Saúde Bucal, NASF/eMulti etc.), com tipo, área e INE.",
+        tipo="pipeline",
+        pasta_bucket="cnes",
+        extract_modules=["scripts.extract.datasus.fetch_cnes_equipes"],
+        process_modules=["scripts.process.datasus.process_cnes_equipes"],
+    ),
 
     # ------------------------------------------------------------------
     # SIM -- Declarações de Óbito (geral, todas as causas) e Causas
@@ -361,6 +379,35 @@ FONTES: list[Fonte] = [
         pasta_bucket="ciha",
         extract_modules=["scripts.extract.datasus.fetch_ciha"],
         process_modules=["scripts.process.datasus.process_ciha"],
+    ),
+
+    # ------------------------------------------------------------------
+    # SRAG -- Síndrome Respiratória Aguda Grave (SIVEP-Gripe), 2009-atual,
+    # um parquet por era da ficha de notificação (ver scripts/config/srag.py)
+    # ------------------------------------------------------------------
+    Fonte(
+        id="srag",
+        nome="SRAG - Síndrome Respiratória Aguda Grave (SIVEP-Gripe)",
+        descricao="Casos de SRAG hospitalizados e óbitos por SRAG notificados no SIVEP-Gripe (influenza, COVID-19, VSR e outros vírus respiratórios), 2009-atual.",
+        tipo="pipeline",
+        pasta_bucket="srag",
+        extract_modules=["scripts.extract.dados_abertos.fetch_srag"],
+        process_modules=["scripts.process.dados_abertos.process_srag"],
+    ),
+
+    # ------------------------------------------------------------------
+    # ANS -- saúde suplementar (planos de saúde), base TabNet .dbc.
+    # 12 tabelas configuradas em scripts/config/bases_ans.py, cada uma
+    # publicada como parquet próprio em ans/
+    # ------------------------------------------------------------------
+    Fonte(
+        id="ans",
+        nome="ANS - Saúde Suplementar (Planos de Saúde)",
+        descricao="Beneficiários, operadoras, planos, ressarcimento ao SUS e demandas de consumidores da saúde suplementar (ANS).",
+        tipo="pipeline",
+        pasta_bucket="ans",
+        extract_modules=["scripts.extract.ans.fetch_ans"],
+        process_modules=["scripts.process.ans.process_ans"],
     ),
 
     # ------------------------------------------------------------------

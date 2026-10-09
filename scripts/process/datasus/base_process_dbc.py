@@ -191,6 +191,13 @@ def processar_diretorio_dbc(dbc_dir: Path, parquet_final_path: Path) -> bool:
 
             if parquet_writer:
                 parquet_writer.close()
+            else:
+                # DBF válido, mas sem nenhum registro (ex.: alguns .dbc da ANS
+                # de anos sem dado). Não é corrupção: só não gera parquet.
+                logger.info(f"   ↳ {arquivo} não tem registros -- pulando (não é erro).")
+                _remover_seguro(caminho_dbf)
+                _remover_seguro(caminho_dbc)
+                continue
 
             # GRAVAÇÃO ATÔMICA: Se chegou aqui sem dar erro, renomeia o .tmp para o nome final
             os.rename(caminho_parquet_trabalho, caminho_parquet_final)
@@ -353,6 +360,15 @@ def processar_fonte_ftp_incremental(dbc_dir: Path, pasta_bucket: str, nome_arqui
         logger.info("Nenhum .dbc novo/alterado -- nada a processar.")
         return exit_codes.SEM_NOVIDADE
 
+    # Confere o MinIO ANTES da conversão (que pode levar horas): se o túnel
+    # estiver fora, falha agora em vez de perder o trabalho no fim.
+    from scripts.common.bucket_sync import get_s3_client
+    try:
+        get_s3_client()
+    except Exception as e:
+        logger.error(f"❌ MinIO inacessível antes de começar ({type(e).__name__}: {e}). Nada foi processado.")
+        return exit_codes.ERRO
+
     sucesso = processar_e_publicar_incremental(dbc_dir, pasta_bucket, nome_arquivo_final)
     if not sucesso:
         return exit_codes.ERRO
@@ -383,6 +399,15 @@ def processar_fonte_ftp_substituicao_completa(dbc_dir: Path, pasta_bucket: str, 
     if not arquivos_presentes:
         logger.info("Nenhum .dbc novo/alterado -- nada a processar.")
         return exit_codes.SEM_NOVIDADE
+
+    # Confere o MinIO ANTES da conversão (que pode levar horas): se o túnel
+    # estiver fora, falha agora em vez de perder o trabalho no fim.
+    from scripts.common.bucket_sync import get_s3_client
+    try:
+        get_s3_client()
+    except Exception as e:
+        logger.error(f"❌ MinIO inacessível antes de começar ({type(e).__name__}: {e}). Nada foi processado.")
+        return exit_codes.ERRO
 
     caminho_final_temp = dbc_dir / nome_arquivo_final
     if not processar_diretorio_dbc(dbc_dir, caminho_final_temp):
