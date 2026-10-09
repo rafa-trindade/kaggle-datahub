@@ -4,9 +4,9 @@
 [![Kaggle](https://img.shields.io/badge/Dataset-Kaggle-346B5D?labelColor=123C2F&logo=kaggle&logoColor=ffffff)](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub)
 [![GitHub Stars](https://img.shields.io/github/stars/rafa-trindade/kaggle-datahub?style=flat&labelColor=123C2F&color=346B5D)](https://github.com/rafa-trindade/kaggle-datahub)
 
-O **DataHub Brasil** nasce de uma necessidade prática: dados públicos brasileiros de altíssimo valor existem, são gratuitos e são oficiais - mas estão espalhados entre sistemas diferentes do DATASUS e do IBGE, cada um com seu próprio protocolo de acesso, formato de arquivo e convenção de nomenclatura. Reunir qualquer análise minimamente ampla exige garimpar meia dúzia de fontes antes de escrever a primeira linha de código de análise.
+O **DataHub Brasil** nasce de uma necessidade prática: dados públicos brasileiros de altíssimo valor existem, são gratuitos e são oficiais - mas estão espalhados entre sistemas diferentes do DATASUS, do IBGE, da ANS e do Portal de Dados Abertos do Ministério da Saúde, cada um com seu próprio protocolo de acesso, formato de arquivo e convenção de nomenclatura. Reunir qualquer análise minimamente ampla exige garimpar meia dúzia de fontes antes de escrever a primeira linha de código de análise.
 
-Este é um hub bruto e geral de dados públicos do Brasil: mortalidade, nascimentos, rede assistencial completa (estabelecimentos, habilitações, leitos, profissionais, equipamentos), internações hospitalares, dezenas de doenças de notificação compulsória, população e PIB por município além dos microdados completos da Pesquisa Nacional de Saúde - sem recorte temático, sem filtro de especialidade, sem viés de pesquisa específica. A ideia é justamente o oposto de um recorte: publicar cada sistema por completo, do jeito mais próximo possível do dado oficial, para que qualquer pesquisador possa aplicar seu próprio filtro.
+Este é um hub bruto e geral de dados públicos do Brasil: mortalidade, nascimentos, rede assistencial completa (estabelecimentos, habilitações, leitos, profissionais, equipamentos, serviços especializados, equipes), internações hospitalares, dezenas de doenças de notificação compulsória, Síndrome Respiratória Aguda Grave (SRAG), saúde suplementar (beneficiários de planos de saúde, operadoras, ressarcimento ao SUS), população e PIB por município além dos microdados completos da Pesquisa Nacional de Saúde - sem recorte temático, sem filtro de especialidade, sem viés de pesquisa específica. A ideia é justamente o oposto de um recorte: publicar cada sistema por completo, do jeito mais próximo possível do dado oficial, para que qualquer pesquisador possa aplicar seu próprio filtro.
 
 O [dataset final](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub) está disponível no Kaggle, com um [notebook de exemplo](https://www.kaggle.com/code/rafatrindade/taxa-de-incid-ncia-de-doen-as-por-munic-pio) demonstrando como cruzar as bases (doenças de notificação compulsória e população, por município) para calcular taxa de incidência por 100 mil habitantes. Cobre diferentes dimensões da saúde pública e demografia do Brasil: desde onde a rede está habilitada a atender e quantos leitos ela tem, até quem nasce, quem morre, quais doenças são notificadas, e como a população e a economia de cada município evoluem ao longo do tempo. 
 
@@ -75,7 +75,7 @@ O **Sistema de Informações sobre Nascidos Vivos (SINASC)** é o equivalente do
 
 O **Cadastro Nacional de Estabelecimentos de Saúde (CNES)** é o registro oficial de todos os estabelecimentos de saúde do Brasil. Aqui, cada arquivo do CNES é publicado **por completo, sem filtro de especialidade**, mantendo a granularidade original de cada sistema.
 
-**Escopo e Processamento:** O cadastro de Estabelecimentos vem via HTTP/ZIP dos Dados Abertos do Ministério da Saúde. Habilitações, Leitos, Profissionais e Equipamentos vêm via FTP, organizados por UF e competência - como o CNES é um **retrato** (não uma série histórica que acumula), cada nova competência **substitui por completo** a anterior, ao contrário do padrão de mesclagem incremental usado no SIM/SINASC.
+**Escopo e Processamento:** O cadastro de Estabelecimentos vem via HTTP/ZIP dos Dados Abertos do Ministério da Saúde. Habilitações, Leitos, Profissionais, Equipamentos, Serviços Especializados e Equipes vêm via FTP, organizados por UF e competência - como o CNES é um **retrato** (não uma série histórica que acumula), cada nova competência **substitui por completo** a anterior, ao contrário do padrão de mesclagem incremental usado no SIM/SINASC.
 
 **Bases disponibilizadas:**
 
@@ -84,6 +84,8 @@ O **Cadastro Nacional de Estabelecimentos de Saúde (CNES)** é o registro ofici
 - `leitos.parquet` - Contagem de leitos por estabelecimento e tipo.
 - `profissionais.parquet` - Profissionais de saúde cadastrados (CBO, carga horária, forma de contratação).
 - `equipamentos.parquet` - Equipamentos cadastrados por estabelecimento (raio-X, ressonância, tomógrafo etc).
+- `servicos_especializados.parquet` - Serviços especializados e classificações oferecidos por estabelecimento (oncologia, nefrologia, reabilitação etc.), com indicação de atendimento SUS/não-SUS (arquivos `SR` do FTP).
+- `equipes.parquet` - Equipes de saúde por estabelecimento (Saúde da Família, Atenção Primária, Saúde Bucal, eMulti etc.), com tipo de equipe, área e INE (arquivos `EP` do FTP).
 
 > BRASIL. Ministério da Saúde. DATASUS. *Cadastro Nacional de Estabelecimentos de Saúde (CNES)*. Brasília, DF: Ministério da Saúde. Disponível em: <https://cnes.datasus.gov.br/>.
 
@@ -167,7 +169,48 @@ O **Sistema de Informação de Agravos de Notificação (SINAN)** registra todas
 
 ---
 
-### **8. Demografia e Economia Municipal (Fonte: IBGE, via API SIDRA)**
+### **8. Síndrome Respiratória Aguda Grave (Fonte: SIVEP-Gripe - Ministério da Saúde)**
+
+O **SIVEP-Gripe** é o sistema de vigilância da **Síndrome Respiratória Aguda Grave (SRAG)**: registra casos hospitalizados e óbitos por SRAG, com resultado laboratorial (influenza, SARS-CoV-2, VSR e outros vírus respiratórios), sintomas, comorbidades, vacinação, internação em UTI e evolução. Não faz parte do SINAN (os 58 agravos acima não incluem influenza/SRAG/COVID-19), então preenche uma lacuna real do hub.
+
+**Escopo e Processamento:** Obtido via HTTP do [Portal de Dados Abertos do Ministério da Saúde](https://dadosabertos.saude.gov.br/dataset?q=srag) (antigo OpenDataSUS), um arquivo por ano (`INFLUDAA`). O Ministério separa os anos em três conjuntos que acompanham três versões da ficha de notificação - por isso o hub publica **um parquet por era** (campos diferentes entre eras, iguais dentro de cada era). A partir de 2019 os arquivos são um **"banco vivo"**: anos recentes são republicados periodicamente com a data no nome (ex.: `INFLUD25-28-09-2026.parquet`). O pipeline descobre os conjuntos e os links a cada execução (API CKAN do portal, com fallback para as páginas HTML), confere o tamanho de cada ano contra o manifesto e só baixa/reprocessa os anos que mudaram - substituindo, dentro do parquet da era, as linhas daquele ano (coluna `_ARQUIVO_ORIGEM`). Todas as colunas são publicadas como texto, sem reinterpretação de tipos, como no restante do hub.
+
+**Bases disponibilizadas:**
+
+- `srag_2009_2012.parquet` - SRAG 2009-2012 (pandemia de H1N1 e anos seguintes).
+- `srag_2013_2018.parquet` - SRAG 2013-2018.
+- `srag_2019_atual.parquet` - SRAG 2019-atual (inclui todo o período da COVID-19), atualizado conforme o banco vivo.
+
+> BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde e Ambiente. *SRAG - Banco de Dados de Síndrome Respiratória Aguda Grave (SIVEP-Gripe)*. Brasília, DF: Ministério da Saúde. Disponível em: <https://dadosabertos.saude.gov.br/dataset/srag-2019-a-2026>.
+
+---
+
+### **9. Saúde Suplementar (Fonte: ANS)**
+
+A **Agência Nacional de Saúde Suplementar (ANS)** regula os planos de saúde, que cobrem cerca de um quarto da população brasileira. Até aqui o hub cobria quase só o lado SUS (o CIHA mostra a produção não-SUS, mas não quem tem plano); a ANS completa o retrato: **quantos beneficiários de plano existem em cada município** (e, cruzando com `populacao_estimada`, a taxa de cobertura), quais operadoras atuam, e quantos atendimentos no SUS foram feitos a quem tem plano (**ressarcimento ao SUS**, cruzável com o SIH).
+
+**Escopo e Processamento:** Baixado via HTTP da base TabNet da ANS (<https://dadosabertos.ans.gov.br/FTP/Base_de_dados/Microdados/dados_dbc/>, a mesma apontada na página ["Baixar base de dados"](https://www.gov.br/ans/pt-br/acesso-a-informacao/perfil-do-setor/dados-e-indicadores-do-setor/baixar-base-de-dados) da ANS). Os arquivos são `.dbc` no mesmo formato TabWin do DATASUS, então passam pela mesma conversão para Parquet. Séries que acumulam (trimestrais, mensais, anuais) são mescladas incrementalmente; tabelas que a ANS mantém só como retrato mais recente (taxa de cobertura, operadoras ativas, planos) são substituídas por completo a cada versão, como no CNES. As 12 tabelas, seus prefixos de arquivo e modos estão em `scripts/config/bases_ans.py`. Os campos vêm **codificados** (faixa etária, modalidade, tipo de contratação etc.); para decodificá-los use os [arquivos auxiliares `.def`/`.cnv` da ANS](https://dadosabertos.ans.gov.br/FTP/Base_de_dados/Microdados/arquivos_auxiliares_de_tab_def_e_cnv/) e a [documentação TabWin](https://www.gov.br/ans/pt-br/arquivos/acesso-a-informacao/perfil-do-setor/dados-e-indicadores-do-setor/baixar-base-de-dados/documentacao_tabwin.zip).
+
+**Bases disponibilizadas:**
+
+- `beneficiarios_por_municipio.parquet` - Beneficiários por município, operadora, faixa etária, sexo e tipo de plano. Trimestral, Mar/2000-atual.
+- `beneficiarios_por_uf_regiao_metropolitana_capital.parquet` - Beneficiários por UF, região metropolitana e capital. Trimestral, Mar/2000-atual.
+- `beneficiarios_por_operadora.parquet` - Beneficiários por operadora. Trimestral, Jun/2011-atual.
+- `taxa_de_cobertura.parquet` - Taxa de cobertura de planos de saúde (retrato mais recente).
+- `mortalidade_por_operadora.parquet` - Série histórica descontinuada por operadora, 2004-2009.
+- `ressarcimento_ao_sus.parquet` - Atendimentos no SUS a beneficiários de planos, identificados para ressarcimento. Anual, 2001-atual.
+- `operadoras_ativas.parquet` - Operadoras com registro ativo (retrato mais recente).
+- `receitas_e_despesas_operadoras.parquet` - Receita de contraprestações e despesas das operadoras. Anual, 2001-atual.
+- `planos.parquet` - Planos de saúde registrados (retrato mais recente).
+- `demandas_reclamacoes.parquet` - Reclamações de consumidores. Mensal, Jan/2010-atual.
+- `demandas_nip.parquet` - Demandas via Notificação de Intermediação Preliminar (NIP). Mensal, Jan/2011-atual.
+- `demandas_informacoes.parquet` - Pedidos de informação de consumidores. Mensal, Jan/2010-atual.
+
+> AGÊNCIA NACIONAL DE SAÚDE SUPLEMENTAR (ANS). *Dados e Indicadores do Setor - Base de dados (TabNet)*. Rio de Janeiro: ANS. Disponível em: <https://www.gov.br/ans/pt-br/acesso-a-informacao/perfil-do-setor/dados-e-indicadores-do-setor>.
+
+---
+
+### **10. Demografia e Economia Municipal (Fonte: IBGE, via API SIDRA)**
 
 O **IBGE**, via sua API pública SIDRA, disponibiliza séries anuais de população estimada e produto interno bruto por município.
 
@@ -182,7 +225,7 @@ O **IBGE**, via sua API pública SIDRA, disponibiliza séries anuais de populaç
 
 ---
 
-### **9. Microdados Completos da PNS (Fonte: IBGE)**
+### **11. Microdados Completos da PNS (Fonte: IBGE)**
 
 A **Pesquisa Nacional de Saúde (PNS)** é um inquérito domiciliar do IBGE com mais de 1.000 variáveis por edição, cobrindo desde diagnósticos autorreferidos até hábitos de vida e acesso a serviços de saúde.
 
@@ -198,7 +241,7 @@ A **Pesquisa Nacional de Saúde (PNS)** é um inquérito domiciliar do IBGE com 
 
 ---
 
-### **10. Base Auxiliar (Macrorregião de Saúde)**
+### **12. Base Auxiliar (Macrorregião de Saúde)**
 
 Para permitir cruzamentos geográficos entre as demais bases, o projeto conta com uma base auxiliar de referência, construída a partir de dados abertos do Ministério da Saúde.
 
@@ -219,6 +262,8 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 - **SIA/SUS (produção ambulatorial):** varia por subsistema - PA desde Jul/1994, APACs em geral desde Jan/2008; ver a seção da fonte para o intervalo de cada base.
 - **CIHA (comunicação hosp./ambulatorial):** 2011-atual.
 - **SINAN (agravos):** varia por agravo, geralmente a partir dos anos 2000; consultar `agravos_sinan.py` para o início exato de cada um.
+- **SRAG (SIVEP-Gripe):** 2009-atual, em três eras (2009-2012, 2013-2018, 2019-atual).
+- **ANS (saúde suplementar):** beneficiários desde 2000 (trimestral), ressarcimento ao SUS e receitas/despesas desde 2001 (anual), demandas de consumidores desde 2010 (mensal); taxa de cobertura, operadoras ativas e planos como retrato mais recente.
 - **IBGE (população/PIB):** população desde 2001, PIB desde 2002.
 - **PNS/IBGE:** edições pontuais de 2013 e 2019.
 
@@ -231,6 +276,8 @@ Para permitir cruzamentos geográficos entre as demais bases, o projeto conta co
 - **IBGE (População/PIB):** sincronização automatizada via API, ano a ano, com descoberta dinâmica de quais anos a tabela realmente cobre.
 - **PNS/IBGE:** obtenção do microdado bruto é manual; a publicação (upload, sem transformação) é automatizada.
 - **Macrorregião de Saúde:** sincronização automatizada via HTTP.
+- **SRAG:** sincronização automatizada via HTTP, com descoberta dinâmica dos conjuntos e arquivos no portal (o "banco vivo" é republicado com nome datado) e detecção de novidade por tamanho, ano a ano.
+- **ANS:** sincronização automatizada via HTTP (índice de diretório da ANS), com detecção de novidade por tamanho de cada `.dbc` contra o manifesto - inclusive revisões de anos/meses já publicados.
 
 O pipeline só publica uma nova versão (bucket + Kaggle) quando pelo menos uma fonte automatizada reporta dado novo de verdade.
 
@@ -261,6 +308,8 @@ cnes/
   leitos.parquet
   profissionais.parquet
   equipamentos.parquet
+  servicos_especializados.parquet
+  equipes.parquet
 
 sih/
   aih_reduzida.parquet
@@ -294,6 +343,26 @@ sinan/
   dengue.parquet, tuberculose.parquet, hanseniase.parquet, ...
   (58 arquivos no total -- lista completa em scripts/config/agravos_sinan.py)
 
+srag/
+  srag_2009_2012.parquet
+  srag_2013_2018.parquet
+  srag_2019_atual.parquet
+
+ans/
+  beneficiarios_por_municipio.parquet
+  beneficiarios_por_uf_regiao_metropolitana_capital.parquet
+  beneficiarios_por_operadora.parquet
+  taxa_de_cobertura.parquet
+  mortalidade_por_operadora.parquet
+  ressarcimento_ao_sus.parquet
+  operadoras_ativas.parquet
+  receitas_e_despesas_operadoras.parquet
+  planos.parquet
+  demandas_reclamacoes.parquet
+  demandas_nip.parquet
+  demandas_informacoes.parquet
+  (lista completa, prefixos e modos em scripts/config/bases_ans.py)
+
 geo/
   macroregiao_de_saude.parquet
 
@@ -310,6 +379,53 @@ metadados.csv          -- manifesto de todos os arquivos: fonte(s), tamanho,
 Uma cópia local do `metadados.csv` também fica versionada em `data/metadados.csv`
 neste repositório -- único arquivo persistente em `data/` (todo o resto é
 scratch space temporário, ver Arquitetura do Pipeline acima).
+
+---
+
+## 🧭 Roadmap
+
+Bases mapeadas para as próximas versões do hub. Nada aqui é publicado ainda - o status indica onde cada uma está.
+
+| Status | Significado |
+|---|---|
+| 🚧 **em implementação** | escopo definido; próxima a entrar no pipeline |
+| 🔎 **em avaliação** | precisa de checagem (disponibilidade, volume, layout) antes de entrar |
+| 💾 **aguardando espaço** | relevante, mas o volume exige mais espaço no Data Lake e/ou dataset Kaggle dedicado |
+
+### ANS - Plano de Dados Abertos (PDA)
+
+Além da base TabNet (já publicada, seção 9), a ANS mantém um portal maior em <https://dadosabertos.ans.gov.br/FTP/PDA/>, com mais de 50 conjuntos em CSV/ZIP. Mapeamento atual:
+
+**Bases menores (candidatas ao dataset principal):**
+
+| Status | Conjunto (pasta no PDA) | Conteúdo | Volume observado |
+|---|---|---|---|
+| 🚧 em implementação | `operadoras_de_plano_de_saude_ativas` / `_canceladas` | Cadastro completo de operadoras (CADOP: CNPJ, modalidade, endereço) - dimensão para todas as tabelas da ANS | ~340 KB (retrato diário) |
+| 🚧 em implementação | `SIP` | Mapa assistencial: procedimentos e eventos realizados pelos planos, por operadora | ~1 MB/trimestre, 2020-2025 |
+| 🚧 em implementação | `hc_ressarcimento_sus` | Ressarcimento ao SUS por operadora (HC), complementar ao `ressarcimento_ao_sus.parquet` | ~800 KB/ano, 2018-atual |
+| 🚧 em implementação | `demonstracoes_contabeis` | Demonstrações contábeis das operadoras | pastas anuais, 2001-atual |
+| 🚧 em implementação | `ressarcimento_ao_SUS_cobranca_arrecadacao`, `ressarcimento_ao_SUS_indice_efetivo_pagamento` | Cobrança, arrecadação e índice de pagamento do ressarcimento | pequeno |
+| 🚧 em implementação | `historico_idss-020`, `taxa_de_resolutividade`, `penalidades_aplicadas_a_operadoras`, `regimes_especiais_direcao_tecnica` | Qualidade, resolutividade e fiscalização das operadoras | pequeno |
+| 🔎 em avaliação | `terminologia_unificada_saude_suplementar_TUSS-049` | Tabela TUSS (procedimentos, materiais, medicamentos) - dimensão para o TISS | a medir |
+| 🔎 em avaliação | `caracteristicas_produtos_saude_suplementar-008`, `historico_planos_saude`, `servicos_opcionais_planos_saude`, `area_comercializacao_planos_ntrp`, `faixa_de_preco`, `valor_comercial_medio_por_municipio_NTRP-054`, `nota_tecnica_ntrp_vcm_faixa_etaria`, `percentuais_de_reajuste_de_agrupamento-055`, `painel_precificacao-031` | Produtos, preços e reajustes dos planos | a medir |
+| 🔎 em avaliação | `painel_de_glosas-057`, `peona_sus`, `solicitacoes_alteracao_rede_hospitalar-046`, `operadoras_acreditadas`, `prestadores_acreditados`, `operadoras_e_prestadores_nao_hospitalares`, `monitoramento_garantia_atendimento`, `classificacao_prudencial-056`, `promoprev-052`, `beneficiarios_vinculos_tipo_contratacao_vda`, `dados_de_beneficiarios_por_operadora`, `dados_de_beneficiarios_por_regiao_geografica`, `taxa_de_cobertura_de_planos_de_saude-047`, `dados_consolidados_da_saude_suplementar`, `caderno_de_informacao`, `quadros_auxiliares_de_corresponsabilidade`, `programa_de_qualificacao_institucional`, `IAP`, `IGR`, `PFA`, `RPC` | Demais indicadores, painéis e agregados (parte deles sobreposta à base TabNet já publicada - avaliar duplicidade) | a medir |
+
+**Bases volumosas (candidatas a dataset Kaggle dedicado, como a PA):**
+
+| Status | Conjunto (pasta no PDA) | Conteúdo | Volume observado |
+|---|---|---|---|
+| 🔎 em avaliação | `TISS/HOSPITALAR`, `TISS/AMBULATORIAL` | Produção assistencial da saúde suplementar (o "SIH/SIA dos planos"): guias consolidadas, detalhadas e de remuneração, por UF e mês, 2015-2025 | só SP/2024: ~0,25 GB (hospitalar) e ~9,4 GB (ambulatorial) zipados - Brasil inteiro chega a dezenas/centenas de GB |
+| 🔎 em avaliação | `informacoes_consolidadas_de_beneficiarios-024` | Beneficiários consolidados por UF/mês, mais granular que a base TabNet, Mai/2021-atual | ~400 MB zipado por mês (~25 GB no total) |
+| 🔎 em avaliação | `produtos_e_prestadores_hospitalares` | Rede hospitalar vinculada a cada plano | ~1,4 GB zipado (retrato) |
+| 🔎 em avaliação | `beneficiarios_identificados_sus_abi` | Beneficiários identificados em atendimentos no SUS (ABI) | a medir |
+
+Fora do escopo (administrativos, sem valor analítico): `agenda_de_autoridades`, `plano_anual_de_atividades_da_auditoria_interna_PAINT`, `glossario_saude_suplementar`, `dataset_teste`.
+
+### Ministério da Saúde / DATASUS
+
+| Status | Base | Observação |
+|---|---|---|
+| 🔎 em avaliação | **SI-PNI** - doses aplicadas do Programa Nacional de Imunizações ([Portal de Dados Abertos](https://dadosabertos.saude.gov.br/)) | Microdados por dose aplicada, arquivos anuais/mensais muito volumosos. Medir o volume total e avaliar publicação em **dataset Kaggle separado**, nos moldes da Produção Ambulatorial. |
 
 ---
 
@@ -357,6 +473,12 @@ Os dados originais permanecem de titularidade e responsabilidade das instituiç�
 
 - **IBGE (População, PIB, PNS):**
   > INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA (IBGE). Rio de Janeiro: IBGE. Disponível em: <https://www.ibge.gov.br/>.
+
+- **Ministério da Saúde - Portal de Dados Abertos (SRAG/SIVEP-Gripe, CNES Estabelecimentos, Macrorregiões):**
+  > BRASIL. Ministério da Saúde. Portal de Dados Abertos da Saúde. Brasília, DF: Ministério da Saúde. Disponível em: <https://dadosabertos.saude.gov.br/>.
+
+- **ANS (Saúde Suplementar):**
+  > AGÊNCIA NACIONAL DE SAÚDE SUPLEMENTAR (ANS). Rio de Janeiro: ANS. Disponível em: <https://www.gov.br/ans/>.
 
 Se você utilizar este dataset em pesquisas, reportagens ou análises, considere citar tanto a fonte original relevante (acima) quanto este repositório de curadoria.
 
