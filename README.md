@@ -487,3 +487,7 @@ Se você utilizar este dataset em pesquisas, reportagens ou análises, considere
 
 #### **Idealização e manutenção:**
 - [Rafael Trindade](https://www.linkedin.com/in/rafatrindade/)
+
+---
+
+![footer](docs/images/powered.png)
