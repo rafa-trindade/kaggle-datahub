@@ -1,4 +1,4 @@
-![header](docs/images/datahub-banner.png)
+![header](docs/images/datahub-banner-powered.png)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-346B5D?labelColor=123C2F)](LICENSE)
 [![Kaggle](https://img.shields.io/badge/Dataset-Kaggle-346B5D?labelColor=123C2F&logo=kaggle&logoColor=ffffff)](https://www.kaggle.com/datasets/rafatrindade/brazilian-kaggle-datahub)
