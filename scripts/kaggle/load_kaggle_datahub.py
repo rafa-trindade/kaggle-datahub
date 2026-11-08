@@ -253,7 +253,7 @@ def _preparar_metadata(api, dataset_id: str, titulo: str, cache_dir: Path,
         logger.info("Baixando metadados existentes para preservar descrição/tags manuais...")
         try:
             api.dataset_metadata(dataset_id, path=str(cache_dir))
-            with open(metadata_path, "r") as m:
+            with open(metadata_path, "r", encoding="utf-8") as m:
                 metadata = json.load(m)
             if isinstance(metadata, str):
                 logger.info("Metadata com codificação JSON dupla (quirk da API) -- desembrulhando...")
@@ -275,12 +275,12 @@ def _preparar_metadata(api, dataset_id: str, titulo: str, cache_dir: Path,
             "resources": [],
         }
 
-    with open(metadata_path, "w") as m:
+    with open(metadata_path, "w", encoding="utf-8") as m:
         json.dump(metadata, m, indent=4)
         m.flush()
         os.fsync(m.fileno())
 
-    with open(metadata_path, "r") as m:
+    with open(metadata_path, "r", encoding="utf-8") as m:
         verificado = json.load(m)
     if not isinstance(verificado, dict):
         raise TypeError(f"dataset-metadata.json inválido: {verificado!r}")
